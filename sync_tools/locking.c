@@ -27,7 +27,10 @@ void
 atomic_sub( int * value,
 	    int   dec_val)
 {
-    /* Implement this */
+    asm volatile("subl %0, %1"
+		:"=a"(*value)
+		:"a"(*value), "b"(dec_val)
+		);
 }
 
 void
