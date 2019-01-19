@@ -15,11 +15,11 @@
  *     Basic memory barrier
  */
 void mem_barrier() {
-    /* Implement this */
+	asm volatile ("mfence" ::: "memory");
 }
 
 
-/* Exercise 2: 
+/* Exercise 2:
  *     Simple atomic operations 
  */
 
