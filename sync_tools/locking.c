@@ -1,4 +1,9 @@
-// Adam Grusky -- January 2019
+/*
+     Adam Grusky
+     January 2019
+
+     Inline x86 Synchronization Tools
+*/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -73,10 +78,13 @@ compare_and_swap(unsigned int * ptr,
 {
     unsigned int init_ptr_val;
    
-    /* we will use the x86 cmpxchg opcode (Intel Vol. 2A 3-181) 
+    /* we will use the CMPXCHG opcode (Intel Vol. 2A 3-181) 
 
-       [lock] cmpxchgl reg, reg/m32
+       [lock] cmpxchgl r32, r/m32
 
+       the value in eax is compared to the destination operand
+
+       if equal, src -> dest           else, dst -> eax
    */
 
    /*
@@ -87,10 +95,10 @@ compare_and_swap(unsigned int * ptr,
    __asm__ __volatile__(
 	"   lock       ;"
 	"   cmpxchgl %2, %1"
-        :"=a"(init_ptr_val), "+m"(*ptr)
-	:"r"(new), "0"(expected)
-        :"memory"
-	);			    
+	:"=a"(init_ptr_val), "+m"(*ptr)
+        :"r"(new), "0"(expected)
+	:"memory"
+	); /* no globbered registers - gcc knows we used eax */			    
 
     return init_ptr_val;
 }
@@ -98,21 +106,25 @@ compare_and_swap(unsigned int * ptr,
 
 void
 spinlock_init(struct spinlock * lock)
-{
-    /* Implement this */
+{      	
+    lock->free = 0;
+    mem_barrier(); 
 }
 
 void
 spinlock_lock(struct spinlock * lock)
 {
-    /* Implement this */
+    // use compare_and_swap to mark spinlock locked (free==1) if unlocked (free==0)   
+    while(compare_and_swap(&lock->free, 0, 1) == 1);
+    mem_barrier();
 }
 
 
 void
 spinlock_unlock(struct spinlock * lock)
 {
-    /* Implement this */
+    mem_barrier();
+    lock->free=0;
 }
 
 
@@ -120,8 +132,24 @@ int
 atomic_add_ret_prev(int * value,
 		    int   inc_val)
 {
-    /* Implement this */
-    return 0;
+    int init_val;
+
+    /* we will use the XADD opcode (Intel Vol. 2A 5-581) 
+
+       [lock] xadd r/m32, r32
+
+       dest and src are swapped and then (dest+src) -> dest
+   */
+
+   __asm__ __volatile__(
+        "   lock       ;"
+        "   xaddl %0, %1"
+        :"=r"(init_val), "=m"(*value)
+        :"0"(inc_val)
+        :"memory"
+        ); /* no globbered registers - gcc knows we used eax */  
+	
+    return init_val;
 }
 
 /* Exercise 4:
@@ -141,14 +169,11 @@ barrier_init(struct barrier * bar,
 void
 barrier_wait(struct barrier * bar)
 {
-   // this handles resetting the barrier
-   if(bar->cur_count == 0)
-   	bar->cur_count = bar->init_count;
-
-   // spin while current count is not zero
+   compare_and_swap(&bar->cur_count, 0, bar->init_count);
+   mem_barrier();
    atomic_sub(&bar->cur_count, 1);
-   
-   while(bar->cur_count != 0);
+   mem_barrier();
+   while(bar->cur_count != 0); 
 }
 
 /* Exercise 5:
