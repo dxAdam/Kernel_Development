@@ -1,5 +1,4 @@
-// Adam Grusky
-// January 2019
+// Adam Grusky -- January 2019
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,31 +14,47 @@
  *     Basic memory barrier
  */
 void mem_barrier() {
-	asm volatile ("mfence" ::: "memory");
+	__asm__ __volatile__("" : : : "memory");
 }
 
 
 /* Exercise 2:
- *     Simple atomic operations 
+ *     Simple atomic operations
  */
+
+
+/* The two functions below use constraints described here:
+
+	"=" - operand is write-only for this instruction & previous value discarded
+	"m" - memory operand is allowed at any machine supported address
+	"i" - immediate integer operand
+	"r" - keep in register
+*/
 
 void
 atomic_sub( int * value,
 	    int   dec_val)
 {
-    asm volatile("subl %0, %1"
-		:"=a"(*value)
-		:"a"(*value), "b"(dec_val)
-		);
+    __asm__ __volatile__(
+    	"   lock       ;"		/* aquire memory bus lock for subl */
+        "   subl %1,%0 ;"
+        :"=m"(*value)
+        :"ir"(dec_val), "m"(*value)
+        :				/* no clobbered registers 	   */
+        );
 }
 
 void
 atomic_add( int * value,
 	    int   inc_val)
 {
-    /* Implement this */
+    __asm__ __volatile__(
+	"   lock       ;"
+        "   addl %1,%0 ;"
+        :"=m"(*value)
+        :"ir"(inc_val), "m"(*value)
+        );
 }
-
 
 
 /* Exercise 3:
@@ -56,10 +71,30 @@ compare_and_swap(unsigned int * ptr,
 		 unsigned int   expected,
 		 unsigned int   new)
 {
-    /* Implement this */
+    unsigned int init_ptr_val;
+   
+    /* we will use the x86 cmpxchg opcode (Intel Vol. 2A 3-181) 
 
-    return 0;
+       [lock] cmpxchgl reg, reg/m32
+
+   */
+
+   /*
+       "a" - use 'a' register
+       "+" - read initally then write-only
+   */ 
+
+   __asm__ __volatile__(
+	"   lock       ;"
+	"   cmpxchgl %2, %1"
+        :"=a"(init_ptr_val), "+m"(*ptr)
+	:"r"(new), "0"(expected)
+        :"memory"
+	);			    
+
+    return init_ptr_val;
 }
+
 
 void
 spinlock_init(struct spinlock * lock)
@@ -81,7 +116,6 @@ spinlock_unlock(struct spinlock * lock)
 }
 
 
-/* return previous value */
 int
 atomic_add_ret_prev(int * value,
 		    int   inc_val)
@@ -98,15 +132,24 @@ void
 barrier_init(struct barrier * bar,
 	     int              count)
 {
-    /* Implement this */
+	//init barrier values
+	bar->iterations = 0;
+	bar->cur_count = 0;
+	bar->init_count = count;
 }
 
 void
 barrier_wait(struct barrier * bar)
 {
-    /* Implement this */
-}
+   // this handles resetting the barrier
+   if(bar->cur_count == 0)
+   	bar->cur_count = bar->init_count;
 
+   // spin while current count is not zero
+   atomic_sub(&bar->cur_count, 1);
+   
+   while(bar->cur_count != 0);
+}
 
 /* Exercise 5:
  *     Reader Writer Locks
