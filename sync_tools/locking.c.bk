@@ -173,61 +173,60 @@ barrier_init(struct barrier * bar,
 void
 barrier_wait(struct barrier * bar)
 {
-    /*
-        barrier_wait() must handle incoming threads arriving
-	 while threads from a previous call are still exiting
-	 
-	we can monitor the incoming and outgoing threads with 
-	 the counters bar->in_count and bar->out_count
-
-	bar->flag is used to signal the arrival of a full set of
-         threads (bar->in_count == bar->max_count)
-	 
-	bar->out_counter is used to signal incoming threads that
-	 threads from a previous call are still exiting
- 
-        we can make use of our previously defined spinlocks to
-	 gain exclusivity to shared barrier variables
-   */
-       
-
-	// thread needs to lock to check counts and set flag	
-	spinlock_lock(&bar->lock);
-	if(bar->in_counter == 0){
-    		// thread is first of a new set
-	    	if(bar->out_counter != 0){	
-	       		// threads from a previous set are still exiting
-
-			// unlock while spinning
-	       		spinlock_unlock(&bar->lock);
-	       		while(bar->out_counter != bar->max_count);
-	    		spinlock_lock(&bar->lock);
-                }	
-		// previous threads have exited
-	    	bar->flag = 0;
-    	}
-
-    	bar->in_counter++;
-
-	// before unlocking create local variable to save 
-	//  thread rank 
-    	int my_rank = bar->in_counter;
-    	spinlock_unlock(&bar->lock);//unlock    
-
-    	if(my_rank == bar->max_count){
-		// thread is last arrival of the set and handles resetting
-		bar->in_counter = 0;
-		bar->out_counter = 1;
-		bar->flag = 1;
+    	
+    //spinlock_lock(&bar->lock);
+    if(bar->in_counter == 0){
+	if(bar->out_counter == 0){
+		bar->flag = 0;
 	}
-    	else{
-		// all but last thread of set wait for full set
-		while(bar->flag == 0);
+	else{
+	    //spinlock_unlock(&bar->lock);
+	    while(bar->out_counter != bar->max_count);
+	    //spinlock_lock(&bar->lock);
+	    bar->flag = 0;
+	}
+    }
 
-		spinlock_lock(&bar->lock);
-		bar->out_counter++;
-		spinlock_unlock(&bar->lock);
-    	}
+    bar->in_counter++;
+    int local_in_count = bar->in_counter;
+    //spinlock_unlock(&bar->lock);    
+	
+    if(local_in_count == bar->max_count){
+	bar->in_counter = 0;
+	bar->out_counter = 1;
+	bar->flag = 1;
+    }
+    else{
+	while(bar->flag == 0);
+	//spinlock_lock(&bar->lock);
+	bar->out_counter++;
+	//spinlock_unlock(&bar->lock);
+    }
+
+
+
+/*
+	__asm__ __volatile__( 
+		"   lock       :"
+        	"   xaddl %0, %1"
+		:"=r"(count), "=r"(*cur_count)
+        	:"0"(1)
+        	:"memory"
+        	);
+
+        //printf("cur_count: %d\n", *cur_count);
+ 	//fflush(stdout);	
+
+
+        if(count == max_count - 1){
+		atomic_sub(cur_count, max_count);	
+	}
+	else
+	{
+		while(*cur_count != 0)
+			mem_barrier();
+	}
+*/
 }
 
 /* Exercise 5:
