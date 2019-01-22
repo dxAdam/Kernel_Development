@@ -191,43 +191,47 @@ barrier_wait(struct barrier * bar)
    */
        
 
-	// thread needs to lock to check counts and set flag	
-	spinlock_lock(&bar->lock);
-	if(bar->in_counter == 0){
-    		// thread is first of a new set
-	    	if(bar->out_counter != 0){	
-	       		// threads from a previous set are still exiting
+    // thread needs to lock to check counts and set flag	
+    spinlock_lock(&bar->lock);
+    if(bar->in_counter == 0){
+    	// thread is first of a new set
+	if(bar->out_counter != 0){	
+	    // threads from a previous set are still exiting
 
-			// unlock while spinning
-	       		spinlock_unlock(&bar->lock);
-	       		while(bar->out_counter != bar->max_count);
-	    		spinlock_lock(&bar->lock);
-                }	
-		// previous threads have exited
-	    	bar->flag = 0;
-    	}
+	    // unlock while spinning
+	    spinlock_unlock(&bar->lock);
+	    while(bar->out_counter != bar->max_count);
+	    spinlock_lock(&bar->lock);
+        }	
+        // previous threads have exited
+	bar->flag = 0;
+    }
 
-    	bar->in_counter++;
+    bar->in_counter++;
 
-	// before unlocking create local variable to save 
-	//  thread rank 
-    	int my_rank = bar->in_counter;
-    	spinlock_unlock(&bar->lock);//unlock    
+    // before unlocking create local variable to save 
+    //  thread rank 
+    int my_rank = bar->in_counter;
+    spinlock_unlock(&bar->lock);//unlock    
 
-    	if(my_rank == bar->max_count){
-		// thread is last arrival of the set and handles resetting
-		bar->in_counter = 0;
-		bar->out_counter = 1;
-		bar->flag = 1;
-	}
-    	else{
-		// all but last thread of set wait for full set
-		while(bar->flag == 0);
+    if(my_rank == bar->max_count){
+	// thread is last arrival of the set and handles resetting
+	bar->in_counter = 0;
+	bar->out_counter = 1; // set before flag since no exclusivity here
+	bar->flag = 1;
+    }
+    else{
+	// all but last thread of set wait for full set
+	while(bar->flag == 0);
 
-		spinlock_lock(&bar->lock);
-		bar->out_counter++;
-		spinlock_unlock(&bar->lock);
-    	}
+	//inlock_lock(&bar->lock);
+	//bar->out_counter++;
+	//spinlock_unlock(&bar->lock);
+		
+ 		// or
+
+	atomic_add(&bar->out_counter, 1);
+    }
 }
 
 /* Exercise 5:
