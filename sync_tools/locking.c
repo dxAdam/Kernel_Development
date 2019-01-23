@@ -256,9 +256,7 @@ rw_read_lock(struct read_write_lock * lock)
 void
 rw_read_unlock(struct read_write_lock * lock)
 {
-    spinlock_lock(&lock->mutex);
-    lock->num_readers--;
-    spinlock_unlock(&lock->mutex);
+    atomic_sub(&lock->num_readers, 1);
 }
 
 void
@@ -274,9 +272,7 @@ rw_write_lock(struct read_write_lock * lock)
 void
 rw_write_unlock(struct read_write_lock * lock)
 {
-    spinlock_lock(&lock->mutex);
     lock->writer--;
-    spinlock_unlock(&lock->mutex);
 }
 
 
