@@ -15,6 +15,7 @@ pthread_barrier_t barrier;
 pthread_barrier_t barrier_less_one;
 
 int global_value = 0;
+int prev_glob = 0;
 int num_threads;
 int producers;
 
@@ -33,6 +34,19 @@ ex1_sub_fn(void * ptr)
 }
 
 void *
+ex1_add_fn(void * ptr)
+{
+    int i = 0;
+
+    pthread_barrier_wait(&barrier);
+
+    for (i = 0; i < ITERATIONS; i++) {
+	prev_glob = atomic_add_ret_prev(&global_value, 1);
+    }
+    return NULL;
+}
+
+void *
 ex2_fn(void * ptr)
 {
     struct barrier * test_barrier = ptr;
@@ -40,14 +54,14 @@ ex2_fn(void * ptr)
     int              i            = 0;
 
     for (i = 0; i < ITERATIONS; i++) {
-        //  printf("Iter %d, global_value =%d\n", i, bar_data->global_value);
+        
 
         if (global_value != (num_threads * i)) {
             ret = (void *)-1;
         }
-        
+ 
         barrier_wait(test_barrier);
-            
+     
         atomic_add(&global_value, 1);
 
         barrier_wait(test_barrier);
@@ -77,7 +91,6 @@ ex3_fn(void * ptr)
 }
 
 
-
 void *
 ex4_read_fn(void * ptr)
 {
@@ -97,7 +110,7 @@ ex4_read_fn(void * ptr)
     pthread_barrier_wait(&barrier);
 
     for (i = 0; i < (ITERATIONS / 10); i++) {
-	//	printf("Read Lock %d\n", i);
+	printf("Read Lock %d\n", i);
 	rw_read_lock(lock);
 	{
 	    for (j = 0; j < ITERATIONS / 10; j++) {
@@ -110,7 +123,7 @@ ex4_read_fn(void * ptr)
 		prev_value = global_value;
 	    }
 	}
-	//	printf("Read Unlock\n");
+	printf("Read Unlock\n");
 	rw_read_unlock(lock);
 
 	usleep(250000);
@@ -134,7 +147,7 @@ ex4_write_fn(void * ptr)
     
     for (i = 0; i < (ITERATIONS / 10); i++) {
 
-	//	printf("Write Lock  %d\n", i);
+	printf("Write Lock  %d\n", i);
        	rw_write_lock(lock);       
 	{
 	    global_value = 0;
@@ -143,7 +156,7 @@ ex4_write_fn(void * ptr)
 	    global_value += i;
 
 	}
-	//	printf("Write unlock\n");
+	printf("Write unlock\n");
 	rw_write_unlock(lock);
 
     }
@@ -151,6 +164,12 @@ ex4_write_fn(void * ptr)
 
     return ret;
 }
+
+   
+
+
+
+
 
 
 
@@ -240,40 +259,55 @@ int main(int argc, char ** argv)
         }
     }
 
-
-
-    /* Barriers */
-    printf("Barrier Test:\t\t");
+ 
+    printf("Exercise 1 (add):\t");
     fflush(stdout);
     {
-        // barrier init
- 
-        struct barrier     test_barrier;
-        unsigned long long test_ret = 0;
-	int                i        = 0;
+        int i = 0;
+        global_value = 0;
 
-	global_value = 0;
-        
-        barrier_init(&test_barrier, num_threads);
-        
         for (i = 0; i < num_threads; i++) {
-            pthread_create(&threads[i], &attrs[i], &ex2_fn, &test_barrier);
+            pthread_create(&threads[i], &attrs[i], &ex1_add_fn, NULL);
+
         }
-        
+
         for (i = 0; i < num_threads; i++) {
             void * ret = NULL;
-	    
             pthread_join(threads[i], &ret);
-            test_ret |= (unsigned long long)ret;
         }
-        
 
-        if (test_ret != 0) {
+
+        if (global_value != num_threads*ITERATIONS) {
             printf("ERROR\n");
         } else {
             printf("SUCCESS\n");
         }
     }
+
+    unsigned int ptrVal = 10;
+    unsigned int compVal = 10;
+    unsigned int newVal = 30;
+
+    compare_and_swap(&ptrVal, compVal, newVal);
+
+    printf("CMPXCHG test 1: \t");
+    if(ptrVal == newVal)
+	    printf("SUCCESS\n");
+    else
+	    printf("ERROR\n");
+
+
+    ptrVal = 10;
+    compVal = 20;
+    unsigned int cas_ret = compare_and_swap(&ptrVal, compVal, newVal);
+
+    printf("CMPXCHG test 2: \t");
+    if(ptrVal == 10 && cas_ret == 10)
+            printf("SUCCESS\n");
+    else
+            printf("ERROR\n");
+
+
 
     /* Spinlocks */
     printf("Spinlocks:\t\t");
@@ -303,7 +337,59 @@ int main(int argc, char ** argv)
         }
     }
 
+/*
+    printf(":atomic_add_ret_prev: \t");
+    fflush(stdout);
+    {
 
+        int x1 = 10;
+	int x2 = 20;
+	int x3 = 0;
+
+	x3 = atomic_add_ret_prev(&x1, x2);
+
+        if (x3 != 10) {
+            printf("ERROR\n");
+        } else {
+            printf("SUCCESS\n");
+        }
+    }
+*/
+
+     /* Barriers */
+    printf("Barrier Test:\t\t");
+    fflush(stdout);
+    {
+        // barrier init
+
+        struct barrier     test_barrier;
+        unsigned long long test_ret = 0;
+        int                i        = 0; 
+
+        global_value = 0;
+
+        barrier_init(&test_barrier, num_threads);
+
+        for (i = 0; i < num_threads; i++) {
+            pthread_create(&threads[i], &attrs[i], &ex2_fn, &test_barrier);
+        }
+
+        for (i = 0; i < num_threads; i++) {
+            void * ret = NULL;
+
+            pthread_join(threads[i], &ret);
+            test_ret |= (unsigned long long)ret;
+        }
+
+
+        if (test_ret != 0) {
+            printf("ERROR\n");
+        } else {
+            printf("SUCCESS\n");
+        }
+    }
+
+   
     /* Reader/writer Locks */
     printf("Reader Writer Locks:\t");
     fflush(stdout);
@@ -336,39 +422,12 @@ int main(int argc, char ** argv)
         } else {
             printf("SUCCESS\n");
         }
-    }
+    }    
 
 
-    /* Lock-free queue */
-    printf("Lock Free Queue:\t");
-    fflush(stdout);
-    {
-        struct lf_queue    queue;
-	unsigned long long test_ret = 0;
-
-        int i = 0;
 
 
-	lf_queue_init(&queue);
-        
-        for (i = 0; i < num_threads - 1; i++) {
-            pthread_create(&threads[i], &attrs[i], &enqueue_fn, &queue);
-        }
-        
-	pthread_create(&threads[num_threads - 1], &attrs[num_threads - 1], &dequeue_fn, &queue);
-
-        for (i = 0; i < num_threads; i++) {
-            void * ret = NULL;
-            pthread_join(threads[i], &ret);
-	    test_ret |= (unsigned long long)ret;
-        }
-	
-
-        if (test_ret != 0) {
-            printf("ERROR\n");
-        } else {
-            printf("SUCCESS\n");
-        }
-    }
-
+    
+    
+    printf("\nexiting testing\n");
 }
