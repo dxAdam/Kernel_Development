@@ -14,15 +14,17 @@ void atomic_add(int * dst, int add_value);
 int atomic_add_ret_prev(int * dst, int inc_value);
 
 struct barrier {
-    int iterations;
-    int cur_count;
-    int init_count;
+    int flag;
+    int in_counter;
+    int out_counter;
+    int max_count;
+    
+    struct spinlock* lock;
 };
 
 
 void barrier_init(struct barrier * bar, int  count);
 void barrier_wait(struct barrier * bar);
-
 
 
 /* Spin locks */

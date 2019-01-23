@@ -41,8 +41,8 @@ atomic_sub( int * value,
 	    int   dec_val)
 {
     __asm__ __volatile__(
-    	"   lock       ;"		/* aquire memory bus lock for subl */
-        "   subl %1,%0 ;"
+    	"   lock;        \n"		/* aquire memory bus lock for subl */
+        "   subl %1,%0   \n"
         :"=m"(*value)
         :"ir"(dec_val), "m"(*value)
         :				/* no clobbered registers 	   */
@@ -54,10 +54,11 @@ atomic_add( int * value,
 	    int   inc_val)
 {
     __asm__ __volatile__(
-	"   lock       ;"
-        "   addl %1,%0 ;"
+	"   lock;        \n"
+        "   addl %1,%0   \n"
         :"=m"(*value)
         :"ir"(inc_val), "m"(*value)
+	:
         );
 }
 
@@ -93,12 +94,12 @@ compare_and_swap(unsigned int * ptr,
    */ 
 
    __asm__ __volatile__(
-	"   lock       ;"
-	"   cmpxchgl %2, %1"
+	"   lock;           \n"
+	"   cmpxchgl %2, %1 \n"
 	:"=a"(init_ptr_val), "+m"(*ptr)
         :"r"(new), "0"(expected)
 	:"memory"
-	); /* no globbered registers - gcc knows we used eax */			    
+	); 			    
 
     return init_ptr_val;
 }
@@ -142,12 +143,12 @@ atomic_add_ret_prev(int * value,
    */
 
    __asm__ __volatile__(
-        "   lock       ;"
-        "   xaddl %0, %1"
+        "   lock;         \n"
+        "   xaddl %0, %1  \n"
         :"=r"(init_val), "=m"(*value)
         :"0"(inc_val)
         :"memory"
-        ); /* no globbered registers - gcc knows we used eax */  
+        );   
 	
     return init_val;
 }
@@ -166,7 +167,9 @@ barrier_init(struct barrier * bar,
 	bar->out_counter = count;
 	bar->max_count = count;
 
-	spinlock_init(&bar->lock);
+	struct spinlock lock;
+	bar->lock = &lock;
+	spinlock_init(bar->lock);
 }
 
 
@@ -174,10 +177,10 @@ void
 barrier_wait(struct barrier * bar)
 {
     /*
-        barrier_wait() must handle incoming threads arriving
+        barrier_wait() must handle incoming threads
 	 while threads from a previous call are still exiting
 	 
-	we can monitor the incoming and outgoing threads with 
+	we can monitor the incoming and exiting threads with 
 	 the counters bar->in_count and bar->out_count
 
 	bar->flag is used to signal the arrival of a full set of
@@ -192,16 +195,16 @@ barrier_wait(struct barrier * bar)
        
 
     // thread needs to lock to check counts and set flag	
-    spinlock_lock(&bar->lock);
+    spinlock_lock(bar->lock);
     if(bar->in_counter == 0){
     	// thread is first of a new set
 	if(bar->out_counter != 0){	
 	    // threads from a previous set are still exiting
 
-	    // unlock while spinning
-	    spinlock_unlock(&bar->lock);
+	    // unlock while waiting
+	    spinlock_unlock(bar->lock);
 	    while(bar->out_counter != bar->max_count);
-	    spinlock_lock(&bar->lock);
+	    spinlock_lock(bar->lock);
         }	
         // previous threads have exited
 	bar->flag = 0;
@@ -210,9 +213,9 @@ barrier_wait(struct barrier * bar)
     bar->in_counter++;
 
     // before unlocking create local variable to save 
-    //  thread rank 
+    //  thread rank -- used to determine who will reset counters/flag 
     int my_rank = bar->in_counter;
-    spinlock_unlock(&bar->lock);//unlock    
+    spinlock_unlock(bar->lock);//unlock    
 
     if(my_rank == bar->max_count){
 	// thread is last arrival of the set and handles resetting
@@ -222,13 +225,7 @@ barrier_wait(struct barrier * bar)
     }
     else{
 	// all but last thread of set wait for full set
-	while(bar->flag == 0);
-
-	//inlock_lock(&bar->lock);
-	//bar->out_counter++;
-	//spinlock_unlock(&bar->lock);
-		
- 		// or
+	while(bar->flag == 0);	
 
 	atomic_add(&bar->out_counter, 1);
     }
