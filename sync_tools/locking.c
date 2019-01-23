@@ -172,7 +172,6 @@ barrier_init(struct barrier * bar,
 	spinlock_init(bar->lock);
 }
 
-
 void
 barrier_wait(struct barrier * bar)
 {
@@ -193,7 +192,7 @@ barrier_wait(struct barrier * bar)
 	 gain exclusivity to shared barrier variables
    */
        
-
+        
     // thread needs to lock to check counts and set flag	
     spinlock_lock(bar->lock);
     if(bar->in_counter == 0){
@@ -229,6 +228,7 @@ barrier_wait(struct barrier * bar)
 
 	atomic_add(&bar->out_counter, 1);
     }
+
 }
 
 /* Exercise 5:
@@ -238,33 +238,45 @@ barrier_wait(struct barrier * bar)
 void
 rw_lock_init(struct read_write_lock * lock)
 {
-    /* Implement this */
+    lock->num_readers = 0;
+    lock->writer = 0;
+    lock->mutex.free = 0;
 }
 
 
 void
 rw_read_lock(struct read_write_lock * lock)
 {
-    /* Implement this */
+    spinlock_lock(&lock->mutex);
+    while(lock->writer);
+    lock->num_readers++;
+    spinlock_unlock(&lock->mutex);
 }
 
 void
 rw_read_unlock(struct read_write_lock * lock)
 {
-    /* Implement this */
+    spinlock_lock(&lock->mutex);
+    lock->num_readers--;
+    spinlock_unlock(&lock->mutex);
 }
 
 void
 rw_write_lock(struct read_write_lock * lock)
 {
-    /* Implement this */
+    spinlock_lock(&lock->mutex);
+    while(lock->writer || lock->num_readers);
+    lock->writer++;
+    spinlock_unlock(&lock->mutex);
 }
 
 
 void
 rw_write_unlock(struct read_write_lock * lock)
 {
-    /* Implement this */
+    spinlock_lock(&lock->mutex);
+    lock->writer--;
+    spinlock_unlock(&lock->mutex);
 }
 
 

@@ -53,7 +53,7 @@ ex2_fn(void * ptr)
     void           * ret          = NULL;
     int              i            = 0;
 
-    for (i = 0; i < 1; i++) {
+    for (i = 0; i < ITERATIONS; i++) {
         
 
         if (global_value != (num_threads * i)) {
@@ -61,9 +61,7 @@ ex2_fn(void * ptr)
         }
  
         barrier_wait(test_barrier);
-
-        //printf("\nIter %d, global_value =%d", i, global_value);     
-        //fflush(stdout);
+     
         atomic_add(&global_value, 1);
 
         barrier_wait(test_barrier);
@@ -93,7 +91,6 @@ ex3_fn(void * ptr)
 }
 
 
-
 void *
 ex4_read_fn(void * ptr)
 {
@@ -113,7 +110,7 @@ ex4_read_fn(void * ptr)
     pthread_barrier_wait(&barrier);
 
     for (i = 0; i < (ITERATIONS / 10); i++) {
-	//	printf("Read Lock %d\n", i);
+	printf("Read Lock %d\n", i);
 	rw_read_lock(lock);
 	{
 	    for (j = 0; j < ITERATIONS / 10; j++) {
@@ -126,7 +123,7 @@ ex4_read_fn(void * ptr)
 		prev_value = global_value;
 	    }
 	}
-	//	printf("Read Unlock\n");
+	printf("Read Unlock\n");
 	rw_read_unlock(lock);
 
 	usleep(250000);
@@ -150,7 +147,7 @@ ex4_write_fn(void * ptr)
     
     for (i = 0; i < (ITERATIONS / 10); i++) {
 
-	//	printf("Write Lock  %d\n", i);
+	printf("Write Lock  %d\n", i);
        	rw_write_lock(lock);       
 	{
 	    global_value = 0;
@@ -159,7 +156,7 @@ ex4_write_fn(void * ptr)
 	    global_value += i;
 
 	}
-	//	printf("Write unlock\n");
+	printf("Write unlock\n");
 	rw_write_unlock(lock);
 
     }
@@ -167,6 +164,12 @@ ex4_write_fn(void * ptr)
 
     return ret;
 }
+
+   
+
+
+
+
 
 
 
@@ -386,5 +389,45 @@ int main(int argc, char ** argv)
         }
     }
 
-   printf("\nexiting testing\n");
+   
+    /* Reader/writer Locks */
+    printf("Reader Writer Locks:\t");
+    fflush(stdout);
+    {
+        struct read_write_lock lock;
+	unsigned long long     test_ret = 0;
+
+        int i = 0;
+
+        global_value = 0;
+
+	rw_lock_init(&lock);
+        
+        for (i = 0; i < num_threads - 1; i++) {
+            pthread_create(&threads[i], &attrs[i], &ex4_read_fn, &lock);
+        }
+        
+	pthread_create(&threads[num_threads - 1], &attrs[num_threads - 1], &ex4_write_fn, &lock);
+
+        for (i = 0; i < num_threads; i++) {
+            void * ret = NULL;
+            pthread_join(threads[i], &ret);
+	    test_ret |= (unsigned long long)ret;
+        }
+	
+
+
+        if (test_ret != 0) {
+            printf("ERROR\n");
+        } else {
+            printf("SUCCESS\n");
+        }
+    }    
+
+
+
+
+    
+    
+    printf("\nexiting testing\n");
 }
