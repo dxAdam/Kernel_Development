@@ -5,6 +5,8 @@
 
 //typedef unsigned long long uintptr_t;
 
+void mem_barrier(void *);
+
 /* Simple atomic operations */
 void atomic_sub(int * dst, int dec_value);
 void atomic_add(int * dst, int add_value);
@@ -14,17 +16,15 @@ void atomic_add(int * dst, int add_value);
 int atomic_add_ret_prev(int * dst, int inc_value);
 
 struct barrier {
-    int flag;
-    int in_counter;
-    int out_counter;
-    int max_count;
-    
-    struct spinlock* lock;
+    int iterations;
+    int cur_count;
+    int init_count;
 };
 
 
 void barrier_init(struct barrier * bar, int  count);
 void barrier_wait(struct barrier * bar);
+
 
 
 /* Spin locks */
@@ -44,7 +44,8 @@ struct read_write_lock {
     int num_readers;
     int writer; 
 
-    struct spinlock mutex;
+    struct spinlock *w_mutex;
+    struct spinlock *mutex;
 };
 
 void rw_lock_init(struct read_write_lock * lock);
