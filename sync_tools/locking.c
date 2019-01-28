@@ -30,7 +30,7 @@ void mem_barrier() {
 
 /* The two functions below use constraints described here:
 
-	"=" - operand is write-only for this instruction & previous value discarded
+	"+" - read initially then write only
 	"m" - memory operand is allowed at any machine supported address
 	"i" - immediate integer operand
 	"r" - keep in register
@@ -42,11 +42,11 @@ atomic_sub( int * value,
 {
     __asm__ __volatile__(
     	"   lock;        \n"		/* aquire memory bus lock for subl */
-        "   subl %1,%0   \n"
-        :"=m"(*value)
-        :"ir"(dec_val), "m"(*value)
-        :				/* no clobbered registers 	   */
-        );
+        "   sub %1,%0    \n"
+        :"+m"(*value)
+        :"ir"(dec_val)
+	:
+	);
 }
 
 void
@@ -55,9 +55,9 @@ atomic_add( int * value,
 {
     __asm__ __volatile__(
 	"   lock;        \n"
-        "   addl %1,%0   \n"
-        :"=m"(*value)
-        :"ir"(inc_val), "m"(*value)
+        "   add %1,%0    \n"
+        :"+m"(*value)
+        :"ir"(inc_val)
 	:
         );
 }
@@ -87,15 +87,14 @@ compare_and_swap(unsigned int * ptr,
 
        if equal, src -> dest           else, dst -> eax
    */
-
+ 
    /*
-       "a" - use 'a' register
-       "+" - read initally then write-only
-   */ 
-
-   __asm__ __volatile__(
+	"a" - eax register
+   */
+       
+    __asm__ __volatile__(
 	"   lock;           \n"
-	"   cmpxchgl %2, %1 \n"
+	"   cmpxchg %2, %1  \n"
 	:"=a"(init_ptr_val), "+m"(*ptr)
         :"r"(new), "0"(expected)
 	:"memory"
@@ -108,24 +107,20 @@ compare_and_swap(unsigned int * ptr,
 void
 spinlock_init(struct spinlock * lock)
 {      	
-    lock->free = 0;
-    mem_barrier(); 
+    lock->free = 1; 
 }
 
 void
 spinlock_lock(struct spinlock * lock)
-{
-    // use compare_and_swap to mark spinlock locked (free==1) if unlocked (free==0)   
-    while(compare_and_swap(&lock->free, 0, 1) == 1);
-    mem_barrier();
+{   
+    while(compare_and_swap(&lock->free, 1, 0) == 0);
 }
 
 
 void
 spinlock_unlock(struct spinlock * lock)
 {
-    mem_barrier();
-    lock->free=0;
+    lock->free=1;
 }
 
 
@@ -144,7 +139,7 @@ atomic_add_ret_prev(int * value,
 
    __asm__ __volatile__(
         "   lock;         \n"
-        "   xaddl %0, %1  \n"
+        "   xadd %0, %1  \n"
         :"=r"(init_val), "=m"(*value)
         :"0"(inc_val)
         :"memory"
@@ -161,76 +156,26 @@ void
 barrier_init(struct barrier * bar,
 	     int              count)
 {
-	//init barrier values
-	bar->flag = 0;
-	bar->in_counter = 0;
-	bar->out_counter = count;
-	bar->max_count = count;
-
-	struct spinlock lock;
-	bar->lock = &lock;
-	spinlock_init(bar->lock);
+	bar->iterations = 0;
+	bar->cur_count = 0;;
+	bar->init_count = count;
 }
 
 void
 barrier_wait(struct barrier * bar)
-{
-    /*
-        barrier_wait() must handle incoming threads
-	 while threads from a previous call are still exiting
-	 
-	we can monitor the incoming and exiting threads with 
-	 the counters bar->in_count and bar->out_count
-
-	bar->flag is used to signal the arrival of a full set of
-         threads (bar->in_count == bar->max_count)
-	 
-	bar->out_counter is used to signal incoming threads that
-	 threads from a previous call are still exiting
- 
-        we can make use of our previously defined spinlocks to
-	 gain exclusivity to shared barrier variables
-   */
-       
-        
-    // thread needs to lock to check counts and set flag	
-    spinlock_lock(bar->lock);
-    if(bar->in_counter == 0){
-    	// thread is first of a new set
-	if(bar->out_counter != 0){	
-	    // threads from a previous set are still exiting
-
-	    // unlock while waiting
-	    spinlock_unlock(bar->lock);
-	    while(bar->out_counter != bar->max_count);
-	    spinlock_lock(bar->lock);
-        }	
-        // previous threads have exited
-	bar->flag = 0;
-    }
-
-    bar->in_counter++;
-
-    // before unlocking create local variable to save 
-    //  thread rank -- used to determine who will reset counters/flag 
-    int my_rank = bar->in_counter;
-    spinlock_unlock(bar->lock);//unlock    
-
-    if(my_rank == bar->max_count){
-	// thread is last arrival of the set and handles resetting
-	bar->in_counter = 0;
-	bar->out_counter = 1; // set before flag since no exclusivity here
-	bar->flag = 1;
-    }
-    else{
-	// all but last thread of set wait for full set
-	while(bar->flag == 0);	
-
-	atomic_add(&bar->out_counter, 1);
-    }
-
+{    
+ 	int my_iteration = bar->iterations;
+	
+	// get snapshot of current count to see who resets
+	int prev = atomic_add_ret_prev(&bar->cur_count, 1);
+	if(prev == bar->init_count-1) {
+		bar->cur_count = 0;
+		bar->iterations++;
+		return;
+	}
+	while(bar->iterations != my_iteration+1);
+		
 }
-
 /* Exercise 5:
  *     Reader Writer Locks
  */
@@ -249,7 +194,7 @@ rw_read_lock(struct read_write_lock * lock)
 {
     spinlock_lock(&lock->mutex);
     while(lock->writer);
-    lock->num_readers++;
+    atomic_add(&lock->num_readers, 1);
     spinlock_unlock(&lock->mutex);
 }
 
@@ -263,8 +208,8 @@ void
 rw_write_lock(struct read_write_lock * lock)
 {
     spinlock_lock(&lock->mutex);
-    while(lock->writer || lock->num_readers);
-    lock->writer++;
+    while(lock->writer || lock->num_readers > 0);
+    atomic_add(&lock->writer, 1);
     spinlock_unlock(&lock->mutex);
 }
 
@@ -272,7 +217,7 @@ rw_write_lock(struct read_write_lock * lock)
 void
 rw_write_unlock(struct read_write_lock * lock)
 {
-    lock->writer--;
+    atomic_sub(&lock->writer, 1);
 }
 
 
@@ -293,10 +238,24 @@ rw_write_unlock(struct read_write_lock * lock)
  */
 uintptr_t
 compare_and_swap_ptr(uintptr_t * ptr,
-		     uintptr_t   expected,
-		     uintptr_t   new)
+		     uintptr_t expected,
+		     uintptr_t new)
 {
-    /* Implement this */
+    uintptr_t init_ptr;
+   
+    __asm__ __volatile__(
+        "   lock;          \n"
+        "   cmpxchg8b %1   \n"
+        :"=a"(init_ptr),
+	 "+m"(*ptr)
+	:"d"((uint32_t)(expected >> 32)),
+         "a"((uint32_t)(expected & 0xffffffff)),
+       	 "c"((uint32_t)(new >> 32)),
+	 "b"((uint32_t)(new & 0xffffffff))	
+ 	:"cc"
+        );
+    
+    return init_ptr;
 }
 
 
@@ -304,28 +263,70 @@ compare_and_swap_ptr(uintptr_t * ptr,
 void
 lf_queue_init(struct lf_queue * queue)
 {
-    /* Implement this */
+	queue->head = malloc(sizeof(struct node));
+	queue->tail = malloc(sizeof(struct node));
+	queue->head->next = NULL;
+	queue->tail->next = NULL;
 }
 
 void
 lf_queue_deinit(struct lf_queue * lf)
 {
-    /* Implement this */
+	lf->head = NULL;
+	lf->tail = NULL;
 }
 
 void
 lf_enqueue(struct lf_queue * queue,
 	   int               val)
 {
-    /* Implement this */
+	struct node *q = malloc(sizeof(struct node));
+	struct node *p;
+
+	q->value = val;
+	q->next = NULL;
+
+	int succ = 0;
+	
+	while(succ ==0){
+	    p = queue->tail;
+	   
+	    compare_and_swap_ptr(
+	                  (uintptr_t *)&p->next,
+			  (uintptr_t)NULL,(uintptr_t)q);
+            succ = (q==p->next);	   
+
+	  //  if(succ == 0){
+	        compare_and_swap_ptr(
+			  (uintptr_t *)&queue->tail, 
+	                  (uintptr_t)p, (uintptr_t)(p->next));		
+	    
+	  //}
+		
+	}
+	//compare_and_swap_ptr((uintptr_t*)&(queue->tail), (uintptr_t)p, (uintptr_t)q);
 }
 
 int
 lf_dequeue(struct lf_queue * queue,
 	   int             * val)
 {
-    /* Implement this */
-    return 0;
+    int succ = 0;
+    struct node *p;
+    uintptr_t oldhead;
+
+    while(succ ==0) {
+        p = queue->head;
+	if(p->next == NULL)
+		return 0;
+  
+    oldhead=compare_and_swap_ptr(
+		  (uintptr_t *)&queue->head,
+		  (uintptr_t)p, (uintptr_t)p->next);
+    *val = p->next->value;
+    }
+    
+    return 1;
 }
 
 
