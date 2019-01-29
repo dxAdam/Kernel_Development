@@ -97,7 +97,7 @@ ex4_read_fn(void * ptr)
     pthread_barrier_wait(&barrier);
 
     for (i = 0; i < (ITERATIONS / 10); i++) {
-//	printf("Read Lock %d\n", i);
+	//printf("Read Lock %d\n", i);
 	rw_read_lock(lock);
 	{
 	    for (j = 0; j < ITERATIONS / 10; j++) {
@@ -110,10 +110,10 @@ ex4_read_fn(void * ptr)
 		prev_value = global_value;
 	    }
 	}
-//	printf("Read Unlock\n");
+	//	printf("Read Unlock\n");
 	rw_read_unlock(lock);
 
-	usleep(250000);
+	usleep(2500);
 	
     }
 
@@ -134,16 +134,16 @@ ex4_write_fn(void * ptr)
     
     for (i = 0; i < (ITERATIONS / 10); i++) {
 
-//	printf("Write Lock  %d\n", i);
-       	rw_write_lock(lock);       
+	//printf("Write Lock  %d\n", i);
+	rw_write_lock(lock);       
 	{
 	    global_value = 0;
 	    
-	    usleep(250000);
+	    usleep(2500);
 	    global_value += i;
 
 	}
-//	printf("Write unlock\n");
+	//printf("Write unlock\n");
 	rw_write_unlock(lock);
 
     }
@@ -303,8 +303,8 @@ int main(int argc, char ** argv)
         }
     }
 
-/*
-     Reader/writer Locks /
+
+    /* Reader/writer Locks */
     printf("Reader Writer Locks:\t");
     fflush(stdout);
     {
@@ -337,7 +337,7 @@ int main(int argc, char ** argv)
             printf("SUCCESS\n");
         }
     }
-    */
+
 
     /* Lock-free queue */
     printf("Lock Free Queue:\t");

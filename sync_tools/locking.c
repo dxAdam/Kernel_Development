@@ -42,7 +42,7 @@ atomic_sub( int * value,
 {
     __asm__ __volatile__(
     	"   lock;        \n"		/* aquire memory bus lock for subl */
-        "   sub %1,%0    \n"
+        "   subl %1,%0    \n"
         :"+m"(*value)
         :"ir"(dec_val)
 	:
@@ -55,7 +55,7 @@ atomic_add( int * value,
 {
     __asm__ __volatile__(
 	"   lock;        \n"
-        "   add %1,%0    \n"
+        "   addl %1,%0    \n"
         :"+m"(*value)
         :"ir"(inc_val)
 	:
@@ -107,7 +107,8 @@ compare_and_swap(unsigned int * ptr,
 void
 spinlock_init(struct spinlock * lock)
 {      	
-    lock->free = 1; 
+    lock->free = 1;
+    mem_barrier(); 
 }
 
 void
@@ -120,6 +121,7 @@ spinlock_lock(struct spinlock * lock)
 void
 spinlock_unlock(struct spinlock * lock)
 {
+    mem_barrier();
     lock->free=1;
 }
 
@@ -139,7 +141,7 @@ atomic_add_ret_prev(int * value,
 
    __asm__ __volatile__(
         "   lock;         \n"
-        "   xadd %0, %1  \n"
+        "   xaddl %0, %1  \n"
         :"=r"(init_val), "=m"(*value)
         :"0"(inc_val)
         :"memory"
@@ -185,7 +187,7 @@ rw_lock_init(struct read_write_lock * lock)
 {
     lock->num_readers = 0;
     lock->writer = 0;
-    lock->mutex.free = 0;
+    lock->mutex.free = 1;
 }
 
 
@@ -249,9 +251,9 @@ compare_and_swap_ptr(uintptr_t * ptr,
         :"=a"(init_ptr),
 	 "+m"(*ptr)
 	:"d"((uint32_t)(expected >> 32)),
-         "a"((uint32_t)(expected & 0xffffffff)),
+         "a"((uint32_t)expected),
        	 "c"((uint32_t)(new >> 32)),
-	 "b"((uint32_t)(new & 0xffffffff))	
+	 "b"((uint32_t)new)	
  	:"cc"
         );
     
@@ -296,15 +298,15 @@ lf_enqueue(struct lf_queue * queue,
 			  (uintptr_t)NULL,(uintptr_t)q);
             succ = (q==p->next);	   
 
-	  //  if(succ == 0){
+	    if(succ == 0){
 	        compare_and_swap_ptr(
 			  (uintptr_t *)&queue->tail, 
 	                  (uintptr_t)p, (uintptr_t)(p->next));		
 	    
-	  //}
+	  }
 		
 	}
-	//compare_and_swap_ptr((uintptr_t*)&(queue->tail), (uintptr_t)p, (uintptr_t)q);
+	compare_and_swap_ptr((uintptr_t*)&(queue->tail), (uintptr_t)p, (uintptr_t)q);
 }
 
 int
