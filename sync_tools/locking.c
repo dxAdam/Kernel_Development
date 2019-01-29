@@ -1,5 +1,6 @@
 /*
      Adam Grusky
+     Carlos Vazquez Gomez
      January 2019
 
      x86 Synchronization Tools
@@ -323,6 +324,7 @@ lf_dequeue(struct lf_queue * queue,
     oldhead=compare_and_swap_ptr(
 		  (uintptr_t *)&queue->head,
 		  (uintptr_t)p, (uintptr_t)p->next);
+     succ = (((struct node*)oldhead)->next == p->next);
     *val = p->next->value;
     }
     
