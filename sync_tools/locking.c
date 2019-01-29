@@ -33,7 +33,6 @@ void mem_barrier() {
 
 	"+" - read initially then write only
 	"m" - memory operand is allowed at any machine supported address
-	"i" - immediate integer operand
 	"r" - keep in register
 */
 
@@ -43,9 +42,9 @@ atomic_sub( int * value,
 {
     __asm__ __volatile__(
     	"   lock;        \n"		/* aquire memory bus lock for subl */
-        "   subl %1,%0    \n"
+        "   sub %1,%0    \n"
         :"+m"(*value)
-        :"ir"(dec_val)
+        :"r"(dec_val)
 	:
 	);
 }
@@ -56,9 +55,9 @@ atomic_add( int * value,
 {
     __asm__ __volatile__(
 	"   lock;        \n"
-        "   addl %1,%0    \n"
+        "   add %1,%0    \n"
         :"+m"(*value)
-        :"ir"(inc_val)
+        :"r"(inc_val)
 	:
         );
 }
@@ -245,7 +244,21 @@ compare_and_swap_ptr(uintptr_t * ptr,
 		     uintptr_t new)
 {
     uintptr_t init_ptr;
-   
+
+    __asm__ __volatile__(
+        "   lock;           \n"
+        "   cmpxchgq %2, %1  \n"
+        :"=a"(init_ptr), "+m"(*ptr)
+        :"r"(new), "0"(expected)
+        :
+        );
+
+    return init_ptr;
+
+
+
+ /* alternative -- used when 32bit OS had no other options  
+
     __asm__ __volatile__(
         "   lock;          \n"
         "   cmpxchg8b %1   \n"
@@ -259,6 +272,7 @@ compare_and_swap_ptr(uintptr_t * ptr,
         );
     
     return init_ptr;
+*/
 }
 
 
@@ -267,7 +281,7 @@ void
 lf_queue_init(struct lf_queue * queue)
 {
 	queue->head = malloc(sizeof(struct node));
-	queue->tail = malloc(sizeof(struct node));
+	queue->tail = queue->head;
 	queue->head->next = NULL;
 	queue->tail->next = NULL;
 }
@@ -275,9 +289,20 @@ lf_queue_init(struct lf_queue * queue)
 void
 lf_queue_deinit(struct lf_queue * lf)
 {
-	lf->head = NULL;
-	lf->tail = NULL;
+
+	// free value that did not get dequeued
+
+	struct node *tmp;
+	while(lf->head->next != NULL){
+		tmp = lf->head->next->next;
+		free(lf->head->next);
+		lf->head->next = tmp;
+	}
+
+	free(lf->head);
 }
+
+
 
 void
 lf_enqueue(struct lf_queue * queue,
@@ -291,7 +316,7 @@ lf_enqueue(struct lf_queue * queue,
 
 	int succ = 0;
 	
-	while(succ ==0){
+	while(succ == 0){
 	    p = queue->tail;
 	   
 	    compare_and_swap_ptr(
@@ -318,17 +343,21 @@ lf_dequeue(struct lf_queue * queue,
     struct node *p;
     uintptr_t oldhead;
 
-    while(succ ==0) {
+    printf("headval: %d\n", queue->head->value);
+
+    while(succ == 0) {
         p = queue->head;
 	if(p->next == NULL)
 		return 0;
-  
-    oldhead=compare_and_swap_ptr(
+ 	//printf("pass\n"); 
+    	oldhead=compare_and_swap_ptr(
 		  (uintptr_t *)&queue->head,
 		  (uintptr_t)p, (uintptr_t)p->next);
-     succ = (((struct node*)oldhead)->next == p->next);
-    *val = p->next->value;
+     	
+	succ = (((struct node*)oldhead)->next == p->next);
+    	*val = p->next->value;
     }
+    free(p);
     
     return 1;
 }

@@ -180,7 +180,7 @@ dequeue_fn(void * ptr)
 	int val = 0;
 
 	while (lf_dequeue(queue, &val) != 0);
-
+	//printf("dequeued val: %d\n", val);
     }
 
     return 0;
@@ -240,9 +240,9 @@ int main(int argc, char ** argv)
         }
     }
 
+/*
 
-
-    /* Barriers */
+    // Barriers
     printf("Barrier Test:\t\t");
     fflush(stdout);
     {
@@ -275,7 +275,7 @@ int main(int argc, char ** argv)
         }
     }
 
-    /* Spinlocks */
+    // Spinlocks
     printf("Spinlocks:\t\t");
     fflush(stdout);
     {
@@ -304,7 +304,7 @@ int main(int argc, char ** argv)
     }
 
 
-    /* Reader/writer Locks */
+    // Reader/writer Locks
     printf("Reader Writer Locks:\t");
     fflush(stdout);
     {
@@ -337,9 +337,9 @@ int main(int argc, char ** argv)
             printf("SUCCESS\n");
         }
     }
+*/
 
-
-    /* Lock-free queue */
+    // Lock-free queue
     printf("Lock Free Queue:\t");
     fflush(stdout);
     {
@@ -364,6 +364,7 @@ int main(int argc, char ** argv)
         }
 	
 
+        lf_queue_deinit(&queue);
         if (test_ret != 0) {
             printf("ERROR\n");
         } else {
@@ -371,4 +372,8 @@ int main(int argc, char ** argv)
         }
     }
 
+
+	pthread_attr_destroy(attrs);
+	free(threads);
+	free(attrs);
 }
