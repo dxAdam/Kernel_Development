@@ -97,7 +97,7 @@ ex4_read_fn(void * ptr)
     pthread_barrier_wait(&barrier);
 
     for (i = 0; i < (ITERATIONS / 10); i++) {
-	//printf("Read Lock %d\n", i);
+	//	printf("Read Lock %d\n", i);
 	rw_read_lock(lock);
 	{
 	    for (j = 0; j < ITERATIONS / 10; j++) {
@@ -113,7 +113,7 @@ ex4_read_fn(void * ptr)
 	//	printf("Read Unlock\n");
 	rw_read_unlock(lock);
 
-	usleep(2500);
+	usleep(250000);
 	
     }
 
@@ -134,16 +134,16 @@ ex4_write_fn(void * ptr)
     
     for (i = 0; i < (ITERATIONS / 10); i++) {
 
-	//printf("Write Lock  %d\n", i);
-	rw_write_lock(lock);       
+	//	printf("Write Lock  %d\n", i);
+       	rw_write_lock(lock);       
 	{
 	    global_value = 0;
 	    
-	    usleep(2500);
+	    usleep(250000);
 	    global_value += i;
 
 	}
-	//printf("Write unlock\n");
+	//	printf("Write unlock\n");
 	rw_write_unlock(lock);
 
     }
@@ -180,7 +180,7 @@ dequeue_fn(void * ptr)
 	int val = 0;
 
 	while (lf_dequeue(queue, &val) != 0);
-	//printf("dequeued val: %d\n", val);
+
     }
 
     return 0;
@@ -240,9 +240,9 @@ int main(int argc, char ** argv)
         }
     }
 
-/*
 
-    // Barriers
+
+    /* Barriers */
     printf("Barrier Test:\t\t");
     fflush(stdout);
     {
@@ -275,7 +275,7 @@ int main(int argc, char ** argv)
         }
     }
 
-    // Spinlocks
+    /* Spinlocks */
     printf("Spinlocks:\t\t");
     fflush(stdout);
     {
@@ -304,7 +304,7 @@ int main(int argc, char ** argv)
     }
 
 
-    // Reader/writer Locks
+    /* Reader/writer Locks */
     printf("Reader Writer Locks:\t");
     fflush(stdout);
     {
@@ -337,9 +337,9 @@ int main(int argc, char ** argv)
             printf("SUCCESS\n");
         }
     }
-*/
 
-    // Lock-free queue
+
+    /* Lock-free queue */
     printf("Lock Free Queue:\t");
     fflush(stdout);
     {
@@ -364,7 +364,6 @@ int main(int argc, char ** argv)
         }
 	
 
-        lf_queue_deinit(&queue);
         if (test_ret != 0) {
             printf("ERROR\n");
         } else {
@@ -372,8 +371,4 @@ int main(int argc, char ** argv)
         }
     }
 
-
-	pthread_attr_destroy(attrs);
-	free(threads);
-	free(attrs);
 }
