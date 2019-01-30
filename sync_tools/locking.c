@@ -240,12 +240,29 @@ rw_write_unlock(struct read_write_lock * lock)
  *
  * The test function uses multiple enqueue threads and a single dequeue thread.
  *  Would this algorithm work with multiple enqueue and multiple dequeue threads? Why or why not?
+
+ * TODO: Verify answer below:
+ * 
+ * No, since the dequeueing threads must free the memory tied to the nodes it is dequeueing. 
+ * Consider this scenario: thread A is dequeuing, and right after it compares & swaps the queue
+ * Head, thread B completes an entire dequeueing. Since B freed its local 'p', which A thinks 
+ * is the "new head", and whose value A must return, the data at this node may not exist when 
+ * A is scheduled again. So multiple dequeueing threads cannot occur because their duty to free
+ * memory may destroy other dequeuer's data. 
  */
 
 
 /* Compare and Swap
  * Same as earlier compare and swap, but with pointers
  * Explain the difference between this and the earlier Compare and Swap function
+ * 
+ * TODO: Verify answer below:
+ * 
+ * This instruction is 'cmpxchgq', as opposed to the earlier 'cmpxchg'. 'cmpxchg' compares and
+ * swaps 32 bit values using 32 bit registers (using %eax), whereas 'cmpxchgq' compares and swaps 64
+ * bit values using 64 bit registers (using %rax). 'cmpxchgq' can only be used in the x86_64 
+ * architecture. To compare & swap 64 bit values in a 32 bit OS, it is required to use 'cmpxchg8b' 
+ * and concatenate two 32 bit registers (using edx:eax)
  */
 uintptr_t
 compare_and_swap_ptr(uintptr_t * ptr,
@@ -334,6 +351,7 @@ lf_enqueue(struct lf_queue * queue,
 			     (uintptr_t)NULL,
 			     (uintptr_t)q);
 
+	// TODO: the nodes 'q' or 'p' may have been freed by a dequeue()!
 	succ = (q==p->next); // successfully enqueued q?
 
 	if(succ == 0){
@@ -363,7 +381,7 @@ lf_dequeue(struct lf_queue * queue,
 		  		       (uintptr_t)p,
 				       (uintptr_t)p->next);
 
-	succ = ((struct node*)old_head == p);
+	succ = ((struct node*)old_head == p);    // Not a problem. Only one dequeueing thread.
     	*val = p->next->value;
     }
 
