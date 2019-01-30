@@ -252,6 +252,7 @@ compare_and_swap_ptr(uintptr_t * ptr,
 		     uintptr_t expected,
 		     uintptr_t new)
 {
+
     uintptr_t init_ptr;
 
     __asm__ __volatile__(
@@ -275,9 +276,9 @@ compare_and_swap_ptr(uintptr_t * ptr,
            :"=a"(init_ptr),
 	    "+m"(*ptr)
 	   :"d"((uint32_t)(expected >> 32)),
-            "a"((uint32_t)expected),
+            "a"((uint32_t)(expected & 0xffffffff)),
        	    "c"((uint32_t)(new >> 32)),
-	    "b"((uint32_t)new)
+	    "b"((uint32_t)(new & 0xffffffff))
  	   :"cc"
            );
 
@@ -300,9 +301,9 @@ void
 lf_queue_deinit(struct lf_queue * lf)
 {
 
-    // free nodes that did not get dequeued
-
     struct node *tmp;
+
+    // free nodes that did not get dequeued
     while(lf->head->next != NULL){
 	tmp = lf->head->next->next;
 	free(lf->head->next);
