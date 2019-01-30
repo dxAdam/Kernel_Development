@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include "locking.h"
 
-#define ITERATIONS 1000
+#define ITERATIONS 100000
 
 pthread_barrier_t barrier;
 pthread_barrier_t barrier_less_one;
@@ -113,7 +113,7 @@ ex4_read_fn(void * ptr)
 	//	printf("Read Unlock\n");
 	rw_read_unlock(lock);
 
-	usleep(250000);
+	usleep(1000);
 	
     }
 
@@ -139,7 +139,7 @@ ex4_write_fn(void * ptr)
 	{
 	    global_value = 0;
 	    
-	    usleep(250000);
+	    usleep(1000);
 	    global_value += i;
 
 	}
