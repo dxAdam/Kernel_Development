@@ -351,12 +351,13 @@ lf_queue_deinit(struct lf_queue * lf)
     while(lf->head->next != NULL){
 	tmp = lf->head->next->next;
 	free(lf->head->next);
-	lf->head->next = tmp;
+	printf("freed\n");
+	lf->head->next  = tmp;
     }
 
     free(lf->head);
-    free(lf->tail);
 }
+
 
 
 
@@ -406,13 +407,13 @@ lf_dequeue(struct lf_queue * queue,
 		return 0; // queue empty
 
     	old_head = compare_and_swap_ptr((uintptr_t *)&queue->head,
-		  		       (uintptr_t)p,
-				       (uintptr_t)p->next);
+		  		        (uintptr_t)p,
+				        (uintptr_t)p->next);
 
 	succ = ((struct node*)old_head == p);
     	*val = p->next->value;
     }
-
+    //printf("dequeued: %d\n", *val);
     free(p); // p == old_head
 
     return 1;
