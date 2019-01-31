@@ -240,12 +240,47 @@ rw_write_unlock(struct read_write_lock * lock)
  *
  * The test function uses multiple enqueue threads and a single dequeue thread.
  *  Would this algorithm work with multiple enqueue and multiple dequeue threads? Why or why not?
+ *
+ * No, the algorithm we implement will not work with multiple dequeue threads for two reasons. 
+ *
+ * First, the dequeuing threads must free the memory tied to the nodes it is dequeuing. 
+ *  Consider this scenario: thread A is dequeuing, and right after it compares & swaps the queue
+ *  Head, thread B completes an entire dequeuing. Since B freed its local 'p', which A thinks 
+ *  is the "new head", and whose value A must return, the data at this node may not exist when 
+ *  A is scheduled again. So multiple dequeuing threads cannot occur because their duty to free
+ *  memory may destroy other dequeuer's data. 
+ *
+ * Second, is the ABA problem. The CSW instruction does not ensure a pointer has not changed
+ *  but only that is has a certain value. This means that a pointer that coincidentally has the
+ *  same value will allow the CSW instruction to succeed when it should fail. Valois describes
+ *  how this problem can occur by this lock-free algorithm when there are multiple dequeue
+ *  threads. A thread attempting to deqeue an item will read the value of head and determine
+ *  the address of the next node. This same thread then uses CSW to make head point to the
+ *  next node. It is possible another dequeuing thread will have changed the value of head by
+ *  this time but due to the ABA problem CSW will still succeed, most likely corrupting the queue.
+ *
+ * Valois presents the SafeRead and Release operations as a potential solution, however
+ *  a paper by Maged M. Micahel and Michael L. Scott titled "Correction of a Memory 
+ *  Management Method for Lock-Free Data Structures" points out race conditions in Valois'
+ *  SafeRead/Release operations and present an algorithm of their own using operations they
+ *  call SafeRead, Release, New, and Reclaim, but they conclude the memory management
+ *  mechanism is impractical.
+ *
  */
+
+
 
 
 /* Compare and Swap
  * Same as earlier compare and swap, but with pointers
  * Explain the difference between this and the earlier Compare and Swap function
+ *
+ *
+ * This instruction is 'cmpxchgq', as opposed to the earlier 'cmpxchg'. 'cmpxchg' compares and
+ *  swaps 32 bit values using 32 bit registers (using %eax), whereas 'cmpxchgq' compares and swaps 64
+ *  bit values using 64 bit registers (using %rax). 'cmpxchgq' can only be used in the x86_64
+ *  architecture. To compare & swap 64 bit values in a 32 bit OS, it is required to use 'cmpxchg8b'
+ *  and concatenate two 32 bit registers (using edx:eax)
  */
 uintptr_t
 compare_and_swap_ptr(uintptr_t * ptr,
@@ -268,7 +303,7 @@ compare_and_swap_ptr(uintptr_t * ptr,
     return init_ptr;
 
 
- /* alternative --  Used when 32bit systems had no other options
+ /* alternative --  used when 32bit systems had no other options
 
     __asm__ __volatile__(
            "   lock;          \n"
@@ -291,16 +326,25 @@ compare_and_swap_ptr(uintptr_t * ptr,
 void
 lf_queue_init(struct lf_queue * queue)
 {
+    /* we allocate a separate node for tail so that 
+         head always points to the node before the
+	 first item in the queue
+	
+       this prevents problems between enqueue and 
+	 dequeue when the queue is empty or only contains
+	 a single node, and also problems when dequeuing 
+	 a single node, as described in Valois' paper
+    */
+	
     queue->head = malloc(sizeof(struct node));
-    queue->tail = queue->head;
-    queue->head->next = NULL;
+    queue->tail = malloc(sizeof(struct node));
+    queue->head->next = queue->tail;
     queue->tail->next = NULL;
 }
 
 void
 lf_queue_deinit(struct lf_queue * lf)
 {
-
     struct node *tmp;
 
     // free nodes that did not get dequeued
@@ -311,6 +355,7 @@ lf_queue_deinit(struct lf_queue * lf)
     }
 
     free(lf->head);
+    free(lf->tail);
 }
 
 
@@ -345,6 +390,7 @@ lf_enqueue(struct lf_queue * queue,
     }
     compare_and_swap_ptr((uintptr_t*)&(queue->tail), (uintptr_t)p, (uintptr_t)q);
 }
+
 
 int
 lf_dequeue(struct lf_queue * queue,
