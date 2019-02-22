@@ -15,7 +15,10 @@
 
 
 struct mem_map {
-    /* Fill this in */
+	int allocated;
+        unsigned long int size;
+        unsigned long int start;
+        struct list_head node;
 };
 
 
