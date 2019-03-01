@@ -213,8 +213,8 @@ petmem_handle_pagefault(struct mem_map * map,
     if(pte->present == 0){
 	//user_page = get_zeroed_page(GFP_KERNEL);
         user_page = petmem_alloc_pages(1);
-        //pte->page_base_addr = PAGE_TO_BASE_ADDR(__pa(user_page));	
-	pte->page_base_addr = user_page;
+        pte->page_base_addr = PAGE_TO_BASE_ADDR(__pa(user_page));	
+	//pte->page_base_addr = user_page;
 	pte->present = 1;
         invlpg(fault_addr);
         invlpg(__pa(user_page));
