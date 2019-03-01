@@ -224,8 +224,8 @@ buddy_free(
 	BUG_ON(mp == NULL);
 	BUG_ON(order > mp->pool_order);
 
-	//printk("****dumping mempool\n");
-        //buddy_dump_mempool(mp);
+	printk("****dumping mempool\n");
+        buddy_dump_mempool(mp);
 
 	/* Fixup requested order to be at least the minimum supported */
 	if (order < mp->min_order)

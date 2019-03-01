@@ -17,7 +17,7 @@ int main(int argc, char ** argv) {
 
     printf("Allocated 1 page at %p\n", buf);
     
-    //pet_dump();
+    pet_dump();
 
 
     buf[50] = 'H';
@@ -35,7 +35,7 @@ int main(int argc, char ** argv) {
     buf[62] = 0;
 
      printf("%s\n", (char *)(buf + 50));
-
+     fflush(stdout);
     pet_free(buf);
 
     //printf("%s\n", (char *)(buf + 50));
