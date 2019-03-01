@@ -42,13 +42,13 @@ uintptr_t
 petmem_alloc_vspace(struct mem_map * map,
 		    u64              num_pages)
 {
-    struct mem_map * tmp;
+//    struct mem_map * tmp;
     //struct list_head *pos;
-    int i;
+//    int i;
 
     printk("Memory allocation\n");
 
-
+/*
     for(i=1; i<=5; i++){
 	tmp = (struct mem_map *)kmalloc(sizeof(struct mem_map), GFP_KERNEL);
         tmp->allocated = i;
@@ -56,6 +56,7 @@ petmem_alloc_vspace(struct mem_map * map,
 	list_add_tail(&(tmp->node), &(map->node));
     }
 
+*/
      
 /*
     list_for_each(pos, &(map->node)){
@@ -113,8 +114,30 @@ void
 petmem_free_vspace(struct mem_map * map,
 		   uintptr_t        vaddr)
 {
+    unsigned long int pml4_index = PML4E64_INDEX(vaddr);
+    unsigned long int pdpe_index = PDPE64_INDEX(vaddr);
+    unsigned long int pde_index = PDE64_INDEX(vaddr);
+    unsigned long int pte_index = PTE64_INDEX(vaddr);
+    uintptr_t cr3 = get_cr3();
+
+    pml4e64_t * pml;
+    pdpe64_t * pdpe;
+    pde64_t * pde;
+    pte64_t * pte;
     
-    petmem_free_pages(0x800000, 1);
+    unsigned long addr;
+
+    pml = CR3_TO_PML4E64_VA(cr3)  + pml4_index*sizeof(pml4e64_t);
+
+    pdpe = __va(BASE_TO_PAGE_ADDR(pml->pdp_base_addr)) + pdpe_index*sizeof(pdpe64_t);
+
+    pde = __va(BASE_TO_PAGE_ADDR(pdpe->pd_base_addr)) + pde_index*sizeof(pde64_t);
+
+    pte = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr)) + pte_index*sizeof(pte64_t);
+    
+    addr = pte->page_base_addr;
+
+    petmem_free_pages(addr, 1);
     printk("Free Memory\n");
     return;
 }
