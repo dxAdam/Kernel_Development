@@ -54,7 +54,7 @@ petmem_alloc_vspace(struct mem_map * map,
 
     unsigned long req_size = num_pages*PAGE_SIZE_4KB;
 
-    printk("Memory allocation\n");
+   // printk("Memory allocation\n");
 /*
 
     for(i=1; i<=5; i++){
@@ -186,18 +186,18 @@ petmem_handle_pagefault(struct mem_map * map,
     pdpe64_t * pdpe;
     pde64_t   * pde;
     pte64_t * pte;  
- 
+/* 
     printk("__va(0x0): %lx\n", (unsigned long)__va(0x0UL));
     printk("__va(0x40000000): %lx\n", (unsigned long)__va(0x40000000UL)); 
 
  
     printk("__pa(0xFFFFFFFFFFFFFFFFUL): %lx\n", __pa(0xFFFFFFFFFFFFFFFFUL)); 
     printk("__pa(0xFFFF800000000000UL): %lx\n", __pa(0xFFFF800000000000UL)); 
- 
+*/
     //printk("pml64_index: %ul\n pdpe_index: %ul\n pdp_index: %ul\n pte_index: %ul\n", pml4_index, pdpe_index, pde_index, pte_index);  
 
     
-    printk("Page fault! error_code: %d    fault address: %p\n", error_code, (void*)fault_addr);
+//    printk("Page fault! error_code: %d    fault address: %p\n", error_code, (void*)fault_addr);
 
     pml = CR3_TO_PML4E64_VA(cr3)  + pml4_index*sizeof(pml4e64_t);
 
