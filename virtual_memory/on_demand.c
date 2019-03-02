@@ -150,12 +150,15 @@ petmem_free_vspace(struct mem_map * map,
 
     pte = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr)) + pte_index*sizeof(pte64_t);
     
-    addr = __va(BASE_TO_PAGE_ADDR(pte->page_base_addr));
+    addr = BASE_TO_PAGE_ADDR(pte->page_base_addr);
 
+    invlpg(addr);
+ 
     //printk("addr == %lx\n", addr);
 
     petmem_free_pages(addr, 1);
     printk("Free Memory\n");
+    
     return;
 }
 
@@ -238,15 +241,13 @@ petmem_handle_pagefault(struct mem_map * map,
     if(pte->present == 0){
 	//user_page = get_zeroed_page(GFP_KERNEL);
         user_page = petmem_alloc_pages(1);
-        pte->page_base_addr = PAGE_TO_BASE_ADDR(__pa(user_page));	
-	//pte->page_base_addr = user_page;
-	pte->present = 1;
-        //invlpg(__va(user_page));
-        invlpg(user_page);
+        printk("user_page: %lx\n", user_page);
+        printk("PAGE_TO_BASE_ADDR(user_page): %lx\n", PAGE_TO_BASE_ADDR(user_page));
+	//pte->page_base_addr = PAGE_TO_BASE_ADDR(__pa(user_page));	
+	pte->page_base_addr = PAGE_TO_BASE_ADDR(user_page);
+        pte->present = 1;
         pte->user_page = 1;
         pte->writable = 1;
-        pte->accessed =1;
-        pte->dirty = 1;
     }
 
     return 0;
