@@ -9,6 +9,7 @@
 #include "pgtables.h"
 #include "swap.h"
 
+
 struct mem_map *
 petmem_init_process(void)
 {
@@ -24,9 +25,9 @@ petmem_init_process(void)
     first_entry->start = PETMEM_REGION_START;
 
     INIT_LIST_HEAD(&map->node);
+ 
     list_add_tail(&(first_entry->node), &(map->node));
-    
-    
+        
     return map;
 }
 
@@ -34,13 +35,40 @@ petmem_init_process(void)
 void
 petmem_deinit_process(struct mem_map * map)
 {
+    struct mem_map * cur;
     struct mem_map * tmp;
 
-    list_for_each_entry(tmp, &(map->node), node){
-	kfree(tmp);
+    list_for_each_entry_safe(cur, tmp, &(map->node), node){
+	
+	/*if(cur->allocated == 1){
+		petmem_free_vspace(map, cur->start);
+	}
+*/
+	kfree(cur);
     }
 
     kfree(map);
+
+}
+
+
+/*
+	returns
+		1 - vaddr is in memory map
+                0 - otherwise
+*/
+
+int
+vaddr_in_map(uintptr_t vaddr, struct mem_map * map){
+    
+    struct mem_map * cur;
+
+    list_for_each_entry(cur, &(map->node), node){
+	if(cur->allocated == 1 && vaddr >= cur->start && vaddr <= vaddr + cur->size)
+		return 1;
+    }
+
+    return 0;
 }
 
 
@@ -49,40 +77,17 @@ petmem_alloc_vspace(struct mem_map * map,
 		    u64              num_pages)
 {
     struct mem_map * cur;
-    struct mem_map * tmp;
     struct mem_map * new;
 
     unsigned long req_size = num_pages*PAGE_SIZE_4KB;
 
-   // printk("Memory allocation\n");
-/*
-
-    for(i=1; i<=5; i++){
-	cur = (struct mem_map *)kmalloc(sizeof(struct mem_map), GFP_KERNEL);
-        cur->allocated = i;
-	
-	list_add_tail(&(cur->node), &(map->node));
-    }
-*/
-     
-/*
-    list_for_each(pos, &(map->node)){
-	tmp = list_entry(pos, struct mem_map, node);
-	if(tmp->allocated == 0 && tmp->size > (num_pages*PAGE_SIZE_4KB)){
-		printk("can allocate\n");
-	}
-	else{
-		printk("cannot allocate\n");
-        }
-    }
-
-*/
+    printk("Memory allocation\n");
 
     /*
 	look for first node that is not allocated and has size >= to requested size
     */
-    list_for_each_entry_safe(cur, tmp ,&(map->node), node){
-	//printk("cur->allocated: %d\n", cur->allocated);
+    list_for_each_entry(cur, &(map->node), node){
+	
 	if(cur->allocated == 0 && cur->size >= req_size){
 	    new = (struct mem_map *)kmalloc(sizeof(struct mem_map), GFP_KERNEL);
 	    new->allocated = 0;
@@ -105,6 +110,7 @@ petmem_alloc_vspace(struct mem_map * map,
     return -1;
 }
 
+
 void
 petmem_dump_vspace(struct mem_map * map)
 {   
@@ -120,7 +126,6 @@ petmem_dump_vspace(struct mem_map * map)
     
     return;
 }
-
 
 
 
@@ -141,24 +146,61 @@ petmem_free_vspace(struct mem_map * map,
     pte64_t * pte;
     
     unsigned long addr;
+    unsigned long page_addr;
+    struct mem_map * cur;
+    struct mem_map * tmp;
+    struct mem_map * next;
+    struct mem_map * prev;
+    
+    printk("Free Memory\n");
+
+    if(vaddr_in_map(vaddr, map) == 0){
+	printk("address not in map\n");
+	return;
+    }
 
     pml = CR3_TO_PML4E64_VA(cr3)  + pml4_index*sizeof(pml4e64_t);
 
     pdpe = __va(BASE_TO_PAGE_ADDR(pml->pdp_base_addr)) + pdpe_index*sizeof(pdpe64_t);
-
     pde = __va(BASE_TO_PAGE_ADDR(pdpe->pd_base_addr)) + pde_index*sizeof(pde64_t);
-
     pte = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr)) + pte_index*sizeof(pte64_t);
-    
+    pte->present = 0;    
     addr = BASE_TO_PAGE_ADDR(pte->page_base_addr);
 
-    invlpg(addr);
- 
-    //printk("addr == %lx\n", addr);
+    invlpg((unsigned long)__va(addr));
 
     petmem_free_pages(addr, 1);
-    printk("Free Memory\n");
     
+
+    page_addr = PAGE_ADDR(addr);
+
+    /* 
+ 	now we remove vaddr from our memory map
+    */
+    list_for_each_entry_safe(cur, tmp, &(map->node), node){
+	if(cur->start == page_addr){
+		printk("cur->start == page_addr\n");
+	
+                cur->allocated = 0;
+
+	        // check if prev node is empty && combine if so
+                prev = list_entry((struct list_head *)&cur->node.prev, struct mem_map, node);
+		if(prev->allocated == 0){
+			prev->size += cur->size;
+			list_del(&cur->node);
+	        	cur = prev;
+		}
+
+		//  check if next node is empty and combine if so
+		next = list_entry((struct list_head *)&cur->node.next, struct mem_map, node);
+	        if(next->allocated == 0){
+		       	cur->size += next->size;
+                        list_del(&cur->node);
+			cur = next;
+		}
+	}
+    }
+
     return;
 }
 
@@ -173,7 +215,7 @@ int
 petmem_handle_pagefault(struct mem_map * map,
 			uintptr_t        fault_addr,
 			u32              error_code)
-{
+{   
     unsigned long int pml4_index = PML4E64_INDEX(fault_addr);
     unsigned long int pdpe_index = PDPE64_INDEX(fault_addr);
     unsigned long int pde_index = PDE64_INDEX(fault_addr);
@@ -189,18 +231,16 @@ petmem_handle_pagefault(struct mem_map * map,
     pdpe64_t * pdpe;
     pde64_t   * pde;
     pte64_t * pte;  
-/* 
-    printk("__va(0x0): %lx\n", (unsigned long)__va(0x0UL));
-    printk("__va(0x40000000): %lx\n", (unsigned long)__va(0x40000000UL)); 
 
- 
-    printk("__pa(0xFFFFFFFFFFFFFFFFUL): %lx\n", __pa(0xFFFFFFFFFFFFFFFFUL)); 
-    printk("__pa(0xFFFF800000000000UL): %lx\n", __pa(0xFFFF800000000000UL)); 
-*/
-    //printk("pml64_index: %ul\n pdpe_index: %ul\n pdp_index: %ul\n pte_index: %ul\n", pml4_index, pdpe_index, pde_index, pte_index);  
+    /*
+	first we check if address is in our memory map
+    */
 
+    if(vaddr_in_map(fault_addr, map) == 0){
+	return -1;
+    }
     
-//    printk("Page fault! error_code: %d    fault address: %p\n", error_code, (void*)fault_addr);
+    printk("Page fault!\n");
 
     pml = CR3_TO_PML4E64_VA(cr3)  + pml4_index*sizeof(pml4e64_t);
 
@@ -215,7 +255,6 @@ petmem_handle_pagefault(struct mem_map * map,
     pdpe = __va(BASE_TO_PAGE_ADDR(pml->pdp_base_addr)) + pdpe_index*sizeof(pdpe64_t);
 
     if(pdpe->present == 0){		
-        //pde_table_page = (unsigned long)kmalloc(sizeof(PAGE_SIZE_4KB), GFP_KERNEL);
         pde_table_page = __get_free_page(GFP_KERNEL);
         pdpe->pd_base_addr = PAGE_TO_BASE_ADDR(__pa(pde_table_page));	
 	pdpe->present = 1;
@@ -223,33 +262,26 @@ petmem_handle_pagefault(struct mem_map * map,
         pdpe->user_page = 1;
     }
     
-
     pde = __va(BASE_TO_PAGE_ADDR(pdpe->pd_base_addr)) + pde_index*sizeof(pde64_t);
     
     if(pde->present == 0){ 
-        //pte_table_page = (unsigned long)kmalloc(sizeof(PAGE_SIZE_4KB), GFP_KERNEL);
         pte_table_page = __get_free_page(GFP_KERNEL);
         pde->pt_base_addr = PAGE_TO_BASE_ADDR(__pa(pte_table_page));	
 	pde->present = 1;
         pde->writable = 1;
         pde->user_page = 1;
-        pde->accessed = 1;
     }
 
     pte = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr)) + pte_index*sizeof(pte64_t); 
 
     if(pte->present == 0){
-	//user_page = get_zeroed_page(GFP_KERNEL);
         user_page = petmem_alloc_pages(1);
-        printk("user_page: %lx\n", user_page);
-        printk("PAGE_TO_BASE_ADDR(user_page): %lx\n", PAGE_TO_BASE_ADDR(user_page));
-	//pte->page_base_addr = PAGE_TO_BASE_ADDR(__pa(user_page));	
 	pte->page_base_addr = PAGE_TO_BASE_ADDR(user_page);
         pte->present = 1;
         pte->user_page = 1;
         pte->writable = 1;
     }
 
+
     return 0;
-    //return -1;
 }
