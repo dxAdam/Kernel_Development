@@ -16,7 +16,7 @@ petmem_init_process(void)
     struct mem_map * map;
     struct mem_map * first_entry;
     
-    map = kmalloc(sizeof(struct mem_map), GFP_KERNEL);
+    map = (struct mem_map *)kmalloc(sizeof(struct mem_map), GFP_KERNEL);
     map->allocated = -1;
 
     first_entry = (struct mem_map *)kmalloc(sizeof(struct mem_map), GFP_KERNEL);
@@ -26,7 +26,7 @@ petmem_init_process(void)
 
     INIT_LIST_HEAD(&map->node);
  
-    list_add_tail(&(first_entry->node), &(map->node));
+    list_add(&first_entry->node, &map->node);
         
     return map;
 }
@@ -86,7 +86,7 @@ petmem_alloc_vspace(struct mem_map * map,
     /*
 	look for first node that is not allocated and has size >= to requested size
     */
-    list_for_each_entry(cur, &(map->node), node){
+    list_for_each_entry(cur, &map->node, node){
 	
 	if(cur->allocated == 0 && cur->size >= req_size){
 	    new = (struct mem_map *)kmalloc(sizeof(struct mem_map), GFP_KERNEL);
@@ -95,9 +95,9 @@ petmem_alloc_vspace(struct mem_map * map,
             new->start = cur->start + req_size;
 	    
             cur->allocated = 1;
-            cur->size = num_pages*PAGE_SIZE_4KB;
+            cur->size = req_size;
     		
-	    list_add_tail(&(new->node), &(map->node));
+	    list_add(&new->node, &cur->node);
 	    return cur->start;
 	}
     }
@@ -173,26 +173,34 @@ petmem_free_vspace(struct mem_map * map,
  	now we remove vaddr from our memory map
     */
     list_for_each_entry_safe(cur, tmp, &(map->node), node){
-	if(cur->start == page_addr){
+	if(cur->start == page_addr && cur->allocated == 1){
 	
                 cur->allocated = 0;
 
 	        // check if prev node is empty && combine if so
                 prev = list_entry((struct list_head *)&cur->node.prev, struct mem_map, node);
+		next = list_entry((struct list_head *)&cur->node.next, struct mem_map, node);
+	
+		if(next == cur)
+			printk("next == cur\n");	
+
 		if(prev->allocated == 0){
+                        printk("detected previous empty: %lx\n", prev->start);
 			prev->size += cur->size;
 			list_del(&cur->node);
 	        	cur = prev;
 		}
 
 		//  check if next node is empty and combine if so
-		next = list_entry((struct list_head *)&cur->node.next, struct mem_map, node);
-	        if(next->allocated == 0){
-		       	cur->size += next->size;
+	        if(next->allocated == 0 && prev != next){
+                        printk("detected next empty: %lx\n", next->start);
+		       	next->size += cur->size;
+                        next->start = cur->start;
                         list_del(&cur->node);
-			cur = next;
+                        cur = next;
 		}
-	}
+                break;
+         } 	
     }
 
     return;
