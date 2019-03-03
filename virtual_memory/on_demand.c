@@ -102,11 +102,6 @@ petmem_alloc_vspace(struct mem_map * map,
 	}
     }
 
-    list_for_each_entry(cur, &(map->node), node){
-	printk("cur->allocated: %d\n", cur->allocated);
-    }
-	
- 
     return -1;
 }
 
@@ -172,14 +167,13 @@ petmem_free_vspace(struct mem_map * map,
     petmem_free_pages(addr, 1);
     
 
-    page_addr = PAGE_ADDR(addr);
+    page_addr = PAGE_ADDR(vaddr);
 
     /* 
  	now we remove vaddr from our memory map
     */
     list_for_each_entry_safe(cur, tmp, &(map->node), node){
 	if(cur->start == page_addr){
-		printk("cur->start == page_addr\n");
 	
                 cur->allocated = 0;
 
