@@ -37,18 +37,22 @@ petmem_deinit_process(struct mem_map * map)
 {
     struct mem_map * cur;
     struct mem_map * tmp;
-
-    list_for_each_entry_safe(cur, tmp, &(map->node), node){
 	
-	/*if(cur->allocated == 1){
-		petmem_free_vspace(map, cur->start);
-	}
-*/
-	kfree(cur);
-    }
+    cur = list_entry(map->node.next, struct mem_map, node);    
 
+   // while(cur->node.next != cur->node.prev){	
+//	if(cur->allocated == 1){
+//		printk("cur allocated\n");
+//	        list_del(&cur->node);
+//	}
+	//cur = list_entry(map->node.next, struct mem_map, node);
+    //}
+
+///    cur = list_entry(map->node.next, struct mem_map, node);
+
+//    list_del(&cur->node);
+    kfree(cur);
     kfree(map);
-
 }
 
 
@@ -57,17 +61,17 @@ petmem_deinit_process(struct mem_map * map)
 		1 - vaddr is in memory map
                 0 - otherwise
 */
-
 int
 vaddr_in_map(uintptr_t vaddr, struct mem_map * map){
     
     struct mem_map * cur;
 
     list_for_each_entry(cur, &(map->node), node){
-	if(cur->allocated == 1 && vaddr >= cur->start && vaddr <= vaddr + cur->size)
+	if(cur->allocated == 1 && vaddr >= cur->start && vaddr <= cur->start + cur->size)
 		return 1;
     }
 
+    printk("vaddr not in mem_map\n");
     return 0;
 }
 
@@ -129,10 +133,10 @@ void
 petmem_free_vspace(struct mem_map * map,
 		   uintptr_t        vaddr)
 {
-    unsigned long int pml4_index = PML4E64_INDEX(vaddr);
-    unsigned long int pdpe_index = PDPE64_INDEX(vaddr);
-    unsigned long int pde_index = PDE64_INDEX(vaddr);
-    unsigned long int pte_index = PTE64_INDEX(vaddr);
+    int pml_index = PML4E64_INDEX(vaddr);
+    int pdpe_index = PDPE64_INDEX(vaddr);
+    int pde_index = PDE64_INDEX(vaddr);
+    int pte_index = PTE64_INDEX(vaddr);
     uintptr_t cr3 = get_cr3();
 
     pml4e64_t * pml;
@@ -142,6 +146,9 @@ petmem_free_vspace(struct mem_map * map,
     
     unsigned long addr;
     unsigned long page_addr;
+    unsigned long num_pages_to_free = 0;
+    unsigned long num_pages_freed  = 0;
+
     struct mem_map * cur;
     struct mem_map * tmp;
     struct mem_map * next;
@@ -150,23 +157,9 @@ petmem_free_vspace(struct mem_map * map,
     printk("Free Memory\n");
 
     if(vaddr_in_map(vaddr, map) == 0){
-	printk("address not in map\n");
 	return;
     }
-
-    pml = CR3_TO_PML4E64_VA(cr3)  + pml4_index*sizeof(pml4e64_t);
-
-    pdpe = __va(BASE_TO_PAGE_ADDR(pml->pdp_base_addr)) + pdpe_index*sizeof(pdpe64_t);
-    pde = __va(BASE_TO_PAGE_ADDR(pdpe->pd_base_addr)) + pde_index*sizeof(pde64_t);
-    pte = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr)) + pte_index*sizeof(pte64_t);
-    pte->present = 0;    
-    addr = BASE_TO_PAGE_ADDR(pte->page_base_addr);
-
-    invlpg((unsigned long)__va(addr));
-
-    petmem_free_pages(addr, 1);
     
-
     page_addr = PAGE_ADDR(vaddr);
 
     /* 
@@ -174,34 +167,87 @@ petmem_free_vspace(struct mem_map * map,
     */
     list_for_each_entry_safe(cur, tmp, &(map->node), node){
 	if(cur->start == page_addr && cur->allocated == 1){
-	
+		
+                num_pages_to_free = cur->size / PAGE_SIZE_4KB;
                 cur->allocated = 0;
 
 	        // check if prev node is empty && combine if so
-                prev = list_entry((struct list_head *)&cur->node.prev, struct mem_map, node);
-		next = list_entry((struct list_head *)&cur->node.next, struct mem_map, node);
-	
-		if(next == cur)
-			printk("next == cur\n");	
+                prev = list_entry(cur->node.prev, struct mem_map, node);
+		next = list_entry(cur->node.next, struct mem_map, node);
 
 		if(prev->allocated == 0){
-                        printk("detected previous empty: %lx\n", prev->start);
 			prev->size += cur->size;
 			list_del(&cur->node);
-	        	cur = prev;
+	        	kfree(cur);
+			cur = prev;
 		}
 
 		//  check if next node is empty and combine if so
 	        if(next->allocated == 0 && prev != next){
-                        printk("detected next empty: %lx\n", next->start);
 		       	next->size += cur->size;
                         next->start = cur->start;
                         list_del(&cur->node);
-                        cur = next;
+                        kfree(cur);
+ 			cur = next;
 		}
-                break;
          } 	
     }
+
+    printk("need to free %lu pages of physical memory\n", num_pages_to_free);
+   
+    while(num_pages_freed <= num_pages_to_free){
+	
+    	pml = CR3_TO_PML4E64_VA(cr3) + pml_index*sizeof(pml4e64_t);    	
+
+	if(pml->present == 0){
+		 num_pages_freed += 512*512*512;
+                 pml += sizeof(pml4e64_t);
+                 continue;
+        }
+
+        pdpe = __va(BASE_TO_PAGE_ADDR(pml->pdp_base_addr)) + pdpe_index*sizeof(pdpe64_t);
+
+        if(pdpe->present == 0){
+		num_pages_freed += 512*512;
+                pdpe += sizeof(pdpe64_t);
+                continue;
+        }
+ 
+    	pde = __va(BASE_TO_PAGE_ADDR(pdpe->pd_base_addr)) + pde_index*sizeof(pde64_t);
+	
+	if(pde->present == 0){
+		num_pages_freed += 512;
+		pde += sizeof(pde64_t);
+		continue;
+	}
+
+	pte = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr)) + pte_index*sizeof(pte64_t);
+
+	if(pte->present == 1){
+    		pte->present = 0;    
+    		addr = BASE_TO_PAGE_ADDR(pte->page_base_addr);
+    		//invlpg((unsigned long)__va(addr));
+    		petmem_free_pages(addr, 1);
+	}
+        num_pages_freed += 1;
+
+	/* we need to check if incrementing the index sends us out of bounds
+             for each index that gets incremented                            */
+	if(pte_index++ == MAX_PTE64_ENTRIES){
+		pte_index = 0;
+		if(pde_index++ == MAX_PDE64_ENTRIES){
+			pde_index = 0;
+			if(pdpe_index == MAX_PDPE64_ENTRIES){
+				pdpe_index = 0;
+				if(pml_index++ == MAX_PML4E64_ENTRIES){
+					return; // reached end of virtual memory
+				}
+			}
+		}
+	}
+        
+    }
+
 
     return;
 }
@@ -218,10 +264,10 @@ petmem_handle_pagefault(struct mem_map * map,
 			uintptr_t        fault_addr,
 			u32              error_code)
 {   
-    unsigned long int pml4_index = PML4E64_INDEX(fault_addr);
-    unsigned long int pdpe_index = PDPE64_INDEX(fault_addr);
-    unsigned long int pde_index = PDE64_INDEX(fault_addr);
-    unsigned long int pte_index = PTE64_INDEX(fault_addr);
+    int pml_index = PML4E64_INDEX(fault_addr);
+    int pdpe_index = PDPE64_INDEX(fault_addr);
+    int pde_index = PDE64_INDEX(fault_addr);
+    int pte_index = PTE64_INDEX(fault_addr);
     uintptr_t cr3 = get_cr3();
     
     unsigned long pdpe_table_page;   
@@ -234,20 +280,25 @@ petmem_handle_pagefault(struct mem_map * map,
     pde64_t   * pde;
     pte64_t * pte;  
 
+
+
+    printk("Page fault!  vaddr: %p\n", (void*)fault_addr);
+    printk("pml index: %d\n", pml_index);
+    printk("pdpe index: %d\n", pdpe_index);
+    printk("pde index: %d\n", pde_index);
+    printk("pte index: %d\n", pte_index);
     /*
 	first we check if address is in our memory map
     */
 
     if(vaddr_in_map(fault_addr, map) == 0){
 	return -1;
-    }
-    
-    printk("Page fault!\n");
+    } 
 
-    pml = CR3_TO_PML4E64_VA(cr3)  + pml4_index*sizeof(pml4e64_t);
+    pml = CR3_TO_PML4E64_VA(cr3)  + pml_index*sizeof(pml4e64_t);
 
     if(pml->present == 0){
-	pdpe_table_page = __get_free_page(GFP_KERNEL);
+	pdpe_table_page = get_zeroed_page(GFP_KERNEL);
 	pml->pdp_base_addr = PAGE_TO_BASE_ADDR(__pa(pdpe_table_page));
         pml->present = 1;
         pml->writable = 1;
@@ -257,7 +308,7 @@ petmem_handle_pagefault(struct mem_map * map,
     pdpe = __va(BASE_TO_PAGE_ADDR(pml->pdp_base_addr)) + pdpe_index*sizeof(pdpe64_t);
 
     if(pdpe->present == 0){		
-        pde_table_page = __get_free_page(GFP_KERNEL);
+        pde_table_page = get_zeroed_page(GFP_KERNEL);
         pdpe->pd_base_addr = PAGE_TO_BASE_ADDR(__pa(pde_table_page));	
 	pdpe->present = 1;
         pdpe->writable = 1;
@@ -267,7 +318,7 @@ petmem_handle_pagefault(struct mem_map * map,
     pde = __va(BASE_TO_PAGE_ADDR(pdpe->pd_base_addr)) + pde_index*sizeof(pde64_t);
     
     if(pde->present == 0){ 
-        pte_table_page = __get_free_page(GFP_KERNEL);
+        pte_table_page = get_zeroed_page(GFP_KERNEL);
         pde->pt_base_addr = PAGE_TO_BASE_ADDR(__pa(pte_table_page));	
 	pde->present = 1;
         pde->writable = 1;
