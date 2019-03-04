@@ -201,7 +201,7 @@ petmem_free_vspace(struct mem_map * map,
 
 	if(pml->present == 0){
 		 num_pages_freed += 512*512*512;
-                 pml += sizeof(pml4e64_t);
+                 pml_index++;
                  continue;
         }
 
@@ -209,7 +209,7 @@ petmem_free_vspace(struct mem_map * map,
 
         if(pdpe->present == 0){
 		num_pages_freed += 512*512;
-                pdpe += sizeof(pdpe64_t);
+                pdpe_index++;
                 continue;
         }
  
@@ -217,7 +217,7 @@ petmem_free_vspace(struct mem_map * map,
 	
 	if(pde->present == 0){
 		num_pages_freed += 512;
-		pde += sizeof(pde64_t);
+		pde_index++;
 		continue;
 	}
 
@@ -226,7 +226,7 @@ petmem_free_vspace(struct mem_map * map,
 	if(pte->present == 1){
     		pte->present = 0;    
     		addr = BASE_TO_PAGE_ADDR(pte->page_base_addr);
-    		//invlpg((unsigned long)__va(addr));
+    		invlpg((unsigned long)__va(addr));
     		petmem_free_pages(addr, 1);
 	}
         num_pages_freed += 1;
