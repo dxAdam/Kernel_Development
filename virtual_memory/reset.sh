@@ -1,3 +1,3 @@
 rmmod petmem.ko
 insmod petmem.ko
-sudo user/test
+sudo user/petmem 128
