@@ -44,7 +44,7 @@ int main(int argc, char ** argv) {
 
     printf("%s", (char *)(buf1 + 50));
     fflush(stdout);    
-    printf("%s", (char *)(buf1 + 4096 + 50));
+    printf("%s", (char *)(buf2 + 60));
     fflush(stdout);
     printf("%s", (char *)(buf3));
     fflush(stdout);
@@ -59,8 +59,8 @@ int main(int argc, char ** argv) {
     pet_dump();
 
     // this should now segfault
-    printf("%s", (char *)(buf1 + 50));
-    fflush(stdout);
+    //printf("%s", (char *)(buf1 + 50));
+    //fflush(stdout);
 
     pet_dump();
 */
