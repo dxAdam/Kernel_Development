@@ -131,7 +131,7 @@ pdpe_table_is_empty(pdpe64_t * pdpe){
 		if(pdpe->present == 1)
 			return 0;
 		
-		pdpe = pdpe + sizeof(pdpe64_t);
+		pdpe = pdpe + 1;
 	}
 	
 	return 1;
@@ -145,7 +145,7 @@ pde_table_is_empty(pde64_t * pde){
 		if(pde->present == 1)
 			return 0;
 		
-		pde = pde + sizeof(pde64_t);
+		pde = pde + 1;
 	}
 	
 	return 1;
@@ -158,12 +158,12 @@ pte_table_is_empty(pte64_t * pte){
 	
 	for(i=0; i<MAX_PTE64_ENTRIES; i++){
 		if(pte->present == 1){
-			printk("found pte->present == %d\n", pte->present);
+			printk("found pte->present == %d   at i==%d   pte==%p\n", pte->present, i, (void*)pte);
 			return 0;
-		}
-		pte = pte + sizeof(pte64_t);
-	}
-        	
+        	}
+                pte = pte + 1;
+        }
+	
 	return 1;
 }
 
@@ -228,14 +228,15 @@ increment_pte_index(pde64_t * pde, pdpe64_t * pdpe, pml4e64_t * pml, \
 {
 
 	pte64_t *pte_base;
-	pte_base = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr));
 
 	*pte_index = *pte_index + 1;	
 
 	if(*pte_index == MAX_PTE64_ENTRIES){	
 		//printk("*pte_index == MAX\n");
 		*pte_index = 0;
-
+	        
+        	pte_base = __va(BASE_TO_PAGE_ADDR(pde->pt_base_addr));
+		
 
 		printk("checking if pte is empty\n");	
 		if(pte_table_is_empty(pte_base)){
@@ -354,8 +355,8 @@ petmem_free_vspace(struct mem_map * map,
 	if(pte->present == 1){
     		pte->present = 0;    
     		addr = BASE_TO_PAGE_ADDR(pte->page_base_addr);
-    		invlpg((unsigned long)__va(addr));
     		petmem_free_pages(addr, 1);
+    		invlpg((unsigned long)__va(addr));
 	}
         
 	num_pages_freed += 1;
