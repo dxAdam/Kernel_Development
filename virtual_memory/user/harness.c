@@ -67,8 +67,8 @@ segv_handler(int         signum,
 	return;
     }  
 
-    printf("SIGSEGV\n");
-
+//    printf("SIGSEGV\n");
+    fflush(stdout);
     // si_addr -> fault addr
 
     // si_code == 1 -> not present
@@ -87,7 +87,7 @@ segv_handler(int         signum,
 	kill(getpid(), SIGSEGV);
     }
 
-    if (faults++ > 5) {exit(0);}
+    //if (faults++ > 5) {exit(0);}
 }
 
 
