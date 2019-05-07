@@ -4,13 +4,15 @@ AR  = ar
 CFLAGS = -g
 LFLAGS = -lpthread
 
-TGT = 	driver 
+TGT = 	test \
+	test_join \
+	test_nested_join \
+	test_many
 
-OBJS =  pet_thread.o \
-	pet_thread_hw.o \
-	driver.o     \
-	pet_hashtable.o \
-	pet_log.o 
+OBJS =  ../pet_thread.o \
+	../pet_thread_hw.o \
+	../pet_hashtable.o \
+	../pet_log.o 
 
 build = \
 	@if [ -z "$V" ]; then \
@@ -22,7 +24,7 @@ build = \
 	fi
 
 % : %.o
-	$(call build,LINK,$(CC) $(CFLAGS) $(OBJS)  -o $@ $(LFLAGS))
+	$(call build,LINK,$(CC) $(CFLAGS) $(OBJS) $< -o $@ $(LFLAGS))
 
 %.o : %.c 
 	$(call build,CC,$(CC) $(CFLAGS) -c $< -o $@)
@@ -35,7 +37,13 @@ build = \
 
 all: $(TGT)
 
-driver : $(OBJS)
+test : $(OBJS) test.o
+
+test_join : $(OBJS) test_join.o
+
+test_nested_join : $(OBJS) test_nested_join.o
+
+test_many : $(OBJS) test_many.o
 
 clean: 
 	rm -f *.o $(OBJS) $(TGT)
