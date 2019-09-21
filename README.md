@@ -1,5 +1,6 @@
-# Kernel Development
-Projects dealing with x86 Linux kernel development
+# Systems Software
+Projects from my Advanced Systems Software course (CS1651) at Pitt. This was my favorite course
+and these projects were some of the most interesting and challenging in the CS curriculum.
  
 ## sync_tools 
 This project involved writing synchronization primitives for multicore systems. We used inline assembly to implement memory barriers, atomic addition/subtraction, spinlocks, barriers, reader writer locks, and finally a lock-free queue..   
