@@ -1,6 +1,6 @@
 ## sync tools
 
-#### project:
+### project:
 
 This project involved writing synchronization primitives for multicore systems.
 
@@ -16,7 +16,7 @@ The code we wrote is located in locking.c, locking.h, and driver.c.
 
 See project1.pdf for more information
   
-#### usage:
+### usage:
 
 compile with  
 `make`  
@@ -27,7 +27,7 @@ driver.c contains several test that would result in deadlocks or error if
 synchronization tools were not used (on multicore systems). The number of
 processors used is the value returned by sysconf(_SC_NPROCESSORS_ONLN).
   
-#### contents:
+### contents:
 
 GCC-Inline-Assembly.pdf   - A guide covering the basics of inline assembly
 
