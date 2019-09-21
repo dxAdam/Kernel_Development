@@ -28,7 +28,7 @@ synchronization tools were not used (on multicore systems). The number of
 processors used is the value returned by sysconf(_SC_NPROCESSORS_ONLN).
   
 ### contents:
-
+<pre>
 GCC-Inline-Assembly.pdf   - A guide covering the basics of inline assembly
 
 LockFreeQueues_Valois.pdf - A paper describing the implementation of a lock
@@ -45,4 +45,4 @@ locking.h                 - locking header file
 project1.pdf              - project description and requirements
 
 submitted.tar             - version that was submitted for grading
-
+</pre>
