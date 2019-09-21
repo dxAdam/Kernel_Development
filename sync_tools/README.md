@@ -1,3 +1,19 @@
-This project involved writing synchronization primitives for multicore systems. We used inline assembly to implement memory barriers, atomic addition/subtraction, spinlocks, barriers, reader writer locks, and finally a lock-free queue. 
+## sync tools
+
+### project:
+
+This project involved writing synchronization primitives for multicore systems.
+
+We wrote inline assembly to implement memory barriers, atomic addition/subtraction, spinlocks, barriers, reader writer locks, and a lock-free queue. 
  
-The functions we wrote are located in locking.c. 
+The code we wrote is located in locking.c and locking.h. 
+
+See project1.pdf for more information
+
+### usage:
+
+compile with 
+'make'
+and run the test driver with
+'./driver'
+
