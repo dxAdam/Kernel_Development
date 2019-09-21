@@ -1,5 +1,5 @@
 ## sync tools
-<pre>
+
 ### project:
 
 This project involved writing synchronization primitives for multicore systems.
@@ -28,7 +28,7 @@ synchronization tools were not used (on multicore systems). The number of
 processors used is the value returned by sysconf(_SC_NPROCESSORS_ONLN).
   
 ### contents:
-
+<pre>
 GCC-Inline-Assembly.pdf   - A guide covering the basics of inline assembly
 
 LockFreeQueues_Valois.pdf - A paper describing the implementation of a lock
