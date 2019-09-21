@@ -1,6 +1,6 @@
 ## sync tools
 
-### project:
+#### project:
 
 This project involved writing synchronization primitives for multicore systems.
 
@@ -16,7 +16,7 @@ The code we wrote is located in locking.c and locking.h.
 
 See project1.pdf for more information
 
-### usage:
+#### usage:
 
 compile with  
 `make`  
