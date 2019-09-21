@@ -28,13 +28,13 @@ synchronization tools were not used (on multicore systems). The number of
 processors used is the value returned by sysconf(_SC_NPROCESSORS_ONLN).
   
 ### contents:
-<pre>
-GCC-Inline-Assembly.pdf   - A guide covering the basics of inline assembly
 
-LockFreeQueues_Valois.pdf - A paper describing the implementation of a lock
-                            free queue that ours is based off of
+GCC-Inline-Assembly.pdf&nbsp; &nbsp;- A guide covering the basics of inline assembly
 
-Makefile                  - run `make` to build project
+LockFreeQueues_Valois.pdf&nbsp;- A paper describing the implementation of a lock
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; free queue that ours is based off of
+
+Makefile &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;- run `make` to build project
 
 driver.c                  - contains several tests for testing our sync tools
 
