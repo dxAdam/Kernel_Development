@@ -29,20 +29,19 @@ processors used is the value returned by sysconf(_SC_NPROCESSORS_ONLN).
   
 ### contents:
 
-GCC-Inline-Assembly.pdf&nbsp; &nbsp; &nbsp;- A guide covering the basics of inline assembly
+GCC-Inline-Assembly.pdf&nbsp; &nbsp; &nbsp; - A guide covering the basics of inline assembly
 
 LockFreeQueues_Valois.pdf&nbsp;- A paper describing the implementation of a lock
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; free queue that ours is based off of
 
-Makefile &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;- run `make` to build project
+Makefile &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; - run `make` to build project
 
-driver.c                  - contains several tests for testing our sync tools
+driver.c &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; - contains several tests for testing our sync tools
 
-locking.c                 - code implementing our sychronization tools
+locking.c &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; - code implementing our sychronization tools
 
-locking.h                 - locking header file
+locking.h &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; - locking header file
 
-project1.pdf              - project description and requirements
+project1.pdf &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; - project description and requirements
 
-submitted.tar             - version that was submitted for grading
-</pre>
+submitted.tar &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; - version that was submitted for grading
