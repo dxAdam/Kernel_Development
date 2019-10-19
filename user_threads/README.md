@@ -2,7 +2,7 @@
 
 ### project:
 
-This project involved implementing a user level pthreads-like library. The library contains functions implementing the initialization and creation of threads, yielding and joining threads, and the termination of threads.
+This project involved implementing a user level pthreads-like library. The library contains functions handling the initialization and creation of threads, yielding and joining threads, and the termination of threads.
 
 The functions we wrote are located in pet_thread.c.
 
