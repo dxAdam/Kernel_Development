@@ -12,6 +12,6 @@ This project implements page tables in the Linux kernel to be used with Ubuntu 1
 The functions we wrote are located in [on_demand.c](https://github.com/dxAdam/Systems_Software/blob/adam/virtual_memory/on_demand.c). 
 
 ## user_threads 
-This project involved implementing a user level pthreads-like library. The library contained functions implementing the initialization and creation of threads, yielding and joining threads, and the termination of threads. 
+This project involved implementing a user level pthreads-like library. The library contains functions handling the initialization and creation of threads, yielding and joining threads, and the termination of threads. 
  
 The functions we wrote are located in [pet_thread.c](https://github.com/dxAdam/Systems_Software/blob/adam/user_threads/pet_thread.c). 
