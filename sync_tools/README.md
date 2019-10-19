@@ -18,10 +18,14 @@ See project1.pdf for more information
   
 ### usage:
 
-compile with  
+compile with   
+  
 `make`  
+  
 and run the test driver with  
+  
 `./driver`  
+  
   
 driver.c contains several test that would result in deadlocks or error if
 synchronization tools were not used (on multicore systems). The number of
