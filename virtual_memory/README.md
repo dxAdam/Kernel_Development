@@ -2,9 +2,9 @@
 
 ### project:
 
-This project involved writing synchronization primitives for multicore systems. We used inline assembly to implement memory barriers, atomic addition/subtraction, spinlocks, barriers, reader writer locks, and finally a lock-free queue..
+This project implements page tables in the Linux kernel to be used with Ubuntu 18. The supplied project framework takes a block of memory offline and makes it available to our module to allocate from.
 
-The code we wrote is located in locking.c and user/test.c.
+The code we wrote is located in on_demand.c and user/test.c.
 
 See project2.pdf for more information
   
