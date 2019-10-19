@@ -46,7 +46,19 @@ See project2.pdf for more information.
 
 ### contents:
 <pre>
+Most framework file descriptions can be found in project2.pdf
+
+user/Makefile             - builds petmem
+
+user/petmem               - used to give our module memory from the running kernel
+
+user/test.c               - tests our page table implementation by allocating/freeing memory
+
+on_demand.c               - our code implementing the page table
+
 project2.pdf		  - project description and requirements
+
+reset.sh                  - automates reloading the module and running offlining memory
 
 submitted.tar		  - version that was submitted for grading
 </pre>
