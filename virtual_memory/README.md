@@ -19,7 +19,7 @@ Once the VM is up and running install git and clone the repo with
   
 and build the kernel module with  
     
-`cd virtual memory`  
+`cd virtual_memory`  
 `make`  
   
 
