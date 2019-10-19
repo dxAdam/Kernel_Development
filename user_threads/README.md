@@ -43,9 +43,9 @@ pet_hashtable.c/h         - a supplied hashtable to use with our implementation
 
 pet_thread.c              - contains our code implementing the user threads
 
-project3.pdf		  - project description and requirements
-
 pet_thread_hw.S           - assembly code used for saving and restoring registers on context switch
+
+project3.pdf		  - project description and requirements
 
 submitted.tar		  - version that was submitted for grading
 </pre>
