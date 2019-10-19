@@ -2,7 +2,7 @@
 
 ### project:
 
-The goal of this project is to implement a four-level page table in the Linux kernel to be used with Ubuntu 18. This involves building the page table data structure, managing a memory map made from kernel style linked lists, translating virtual addresses to physical addresses (and vice versa), correctly freeing pages as they are no longer needed, and more. The supplied project framework takes a block of memory offline and makes it available to our module to allocate from.
+The goal of this project is to implement a four-level page table in the Linux kernel to be used with Ubuntu 18. This involves building the page table data structure, managing a memory map made from a kernel style linked list, translating virtual addresses to physical addresses (and vice versa), correctly freeing pages as they are no longer needed, and more. The supplied project framework takes a block of memory offline and makes it available to our module to allocate from.
 
 The code we wrote is located in on_demand.c and user/test.c.
 
