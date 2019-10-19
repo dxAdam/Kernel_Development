@@ -7,7 +7,7 @@ This project involved writing synchronization primitives for multicore systems. 
 The functions we wrote are located in [locking.c](https://github.com/dxAdam/Systems_Software/blob/adam/sync_tools/locking.c). 
   
 ## virtual_memory 
-This project involved implementing page tables in the Linux kernel to be used with Ubuntu 18. The supplied project framework took a block of memory offline and made it available to us to allocate from. 
+This project implements page tables in the Linux kernel to be used with Ubuntu 18. The supplied project framework takes a block of memory offline and makes it available to our module to allocate from. 
  
 The functions we wrote are located in [on_demand.c](https://github.com/dxAdam/Systems_Software/blob/adam/virtual_memory/on_demand.c). 
 
