@@ -10,13 +10,21 @@ See project3.pdf for more information
   
 ### usage:
 
-Clone the repo with  
+Clone and enter the repo with  
   
-`git clone https://github.com/dxadam/Systems_Software/virtual_memory`  
+`git clone https://github.com/dxadam/Systems_Software/user_threads`  
+`cd user_threads`.  
   
+Build the project with  
   
- COMING SOON  
+`make`  
   
+and make and run the test files with 
+  
+`cd tests`  
+`make`  
+`./test.c`.  
+   
 See project3.pdf for more information.  
 
 ### contents:
