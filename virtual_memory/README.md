@@ -61,6 +61,8 @@ user/petmem               - used to give our module memory from the running kern
 
 user/test.c               - tests our page table implementation by allocating/freeing memory
 
+Makefile                  - builds the kernel module
+
 on_demand.c               - our code implementing the page table
 
 project2.pdf		  - project description and requirements
