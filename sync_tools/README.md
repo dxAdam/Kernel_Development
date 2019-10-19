@@ -28,8 +28,10 @@ and run the test driver with
   
   
 driver.c contains several test that would result in deadlocks or error if
-synchronization tools were not used (on multicore systems). The number of
-processors used is the value returned by sysconf(_SC_NPROCESSORS_ONLN).
+synchronization tools were not used (on multicore systems). Try removing a spinlock
+or barrier from one of the tests to likely result in a deadlock.
+
+The number of processors used is the value returned by sysconf(_SC_NPROCESSORS_ONLN) to the program.
   
 ### contents:
 <pre>
