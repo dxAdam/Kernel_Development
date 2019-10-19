@@ -10,14 +10,14 @@ See project2.pdf for more information
   
 ### usage:
 
-The best way to work with this project is to install Ubuntu 18 on a virtual machine and clone this repo. To avoid VM latency I like to SSH into the VM from the hosting desktop and work from there.  
+The best way to work with this project is to install Ubuntu 18 on a virtual machine. To avoid latency I like to SSH into the virtual machine from the hosting desktop and work from there.  
 
 Once the VM is up and running install git and clone the repo with  
   
 `sudo apt install git`  
 `git clone https://github.com/dxadam/Systems_Software/virtual_memory`  
   
-then build the kernel module with  
+and build the kernel module with  
     
 `cd virtual memory`  
 `make`  
