@@ -12,9 +12,13 @@ See project2.pdf for more information
 
 First we need to compile and load the kernel module. This is done
 by running  
+  
 	make  
+  
+
 in the main directory. The module is then inserted into a
 running kernel with  
+  
 	sudo insmod petmem.ko  
   
 We take memory offline and give it to our module by first building petmem with  
