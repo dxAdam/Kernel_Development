@@ -12,31 +12,31 @@ See project2.pdf for more information
 
 First we need to compile and load the kernel module. This is done
 by running  
-	`make`  
+	make  
 in the main directory. The module is then inserted into a
 running kernel with  
-	`sudo insmod petmem.ko`.  
+	sudo insmod petmem.ko  
   
 We take memory offline and give it to our module by first building petmem with  
 
-	`cd user`  
-	`make`  
+	cd user  
+	make  
   
 and running petmem with  
   
-	`sudo ./petmem 128`.  
+	sudo ./petmem 128  
   
 Finally we run the test program with  
   
-	`./test`.  
+	./test  
   
 If changes are made to on_demand.c or any other module file then we will need to remove the current module before inserting our newly compiled one. This is done with  
   
-	`sudo rmmod petmem.ko`.  
+	sudo rmmod petmem.ko  
   
 This process is automated by running  
   
-	`./reset.sh`
+	./reset.sh
   
 See project2.pdf for more information.  
 
