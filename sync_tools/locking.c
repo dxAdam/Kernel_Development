@@ -10,9 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-
 #include "locking.h"
-
 
 
 
@@ -22,6 +20,7 @@
 void mem_barrier() {
 	__asm__ __volatile__("" : : : "memory");
 }
+
 
 
 /* Exercise 2:
@@ -50,6 +49,7 @@ atomic_sub( int * value,
 }
 
 void
+
 atomic_add( int * value,
 	    int   inc_val)
 {
@@ -61,6 +61,7 @@ atomic_add( int * value,
 	   :
            );
 }
+
 
 
 /* Exercise 3:
