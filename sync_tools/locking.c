@@ -34,7 +34,6 @@ void mem_barrier() {
 	"m" - memory operand is allowed at any machine supported address
 	"r" - keep in register
 */
-
 void
 atomic_sub( int * value,
 	    int   dec_val)
@@ -49,7 +48,6 @@ atomic_sub( int * value,
 }
 
 void
-
 atomic_add( int * value,
 	    int   inc_val)
 {
